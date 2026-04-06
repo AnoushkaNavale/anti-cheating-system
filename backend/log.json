@@ -1,0 +1,21 @@
+{
+  "studentId": "S101",
+  "examId": "E202",
+  "timestamp": "2026-04-06T18:30:00Z",
+  "events": [
+    {
+      "type": "copy",
+      "time": 12
+    },
+    {
+      "type": "paste",
+      "time": 25
+    },
+    {
+      "type": "tab_switch",
+      "time": 40
+    }
+  ],
+  "eventCount": 3,
+  "cheatScore": 7
+}
