@@ -5,7 +5,7 @@ stores logs on IPFS, and records proof-of-integrity hashes on the Ethereum block
 
 ---
 
-## 🏗 Project Structure
+##  Project Structure
 
 ```
 exam-logger/
@@ -22,7 +22,7 @@ exam-logger/
 
 ---
 
-## ⚙️ Prerequisites
+##  Prerequisites
 
 | Tool | Version | Download |
 |------|---------|----------|
@@ -34,7 +34,7 @@ exam-logger/
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Step 1 — Launch Ganache
 
@@ -135,7 +135,7 @@ cd frontend && npx serve .
 
 ---
 
-## 📋 Test Flow
+##  Test Flow
 
 ### Basic Exam Test
 
@@ -159,8 +159,8 @@ cd frontend && npx serve .
 
 4. **Verify Integrity**
    - Go to **VERIFY** tab (auto-filled)
-   - Click **🔍 VERIFY INTEGRITY**
-   - Should show ✅ VALID
+   - Click ** VERIFY INTEGRITY**
+   - Should show  VALID
    - To test tamper detection: change 1 character in the hash → shows 🚨 TAMPERED
 
 5. **Admin Dashboard**
@@ -169,7 +169,7 @@ cd frontend && npx serve .
 
 ---
 
-## 🔌 API Reference
+##  API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -208,7 +208,7 @@ cd frontend && npx serve .
 
 ---
 
-## 🔐 Smart Contract Functions
+##  Smart Contract Functions
 
 ```solidity
 // Store a log batch CID on-chain
@@ -231,7 +231,7 @@ function getStudentBatches(string memory studentId) public view returns (string[
 
 ---
 
-## 🎯 Cheating Score System
+##  Cheating Score System
 
 | Event | Points | Severity |
 |-------|--------|----------|
@@ -248,7 +248,7 @@ function getStudentBatches(string memory studentId) public view returns (string[
 
 ---
 
-## 🧩 Architecture
+##  Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -289,7 +289,7 @@ function getStudentBatches(string memory studentId) public view returns (string[
 
 ---
 
-## 🛠 Troubleshooting
+##  Troubleshooting
 
 **MetaMask shows wrong network:**
 → Switch to Ganache Local (Chain ID: 1337)
