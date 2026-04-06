@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ExamChain — Tamper-Proof Exam Logger</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- All styles live in style.css -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-grid">
+
+  <!-- ═══════════════════════════════════
+       HEADER
+  ════════════════════════════════════ -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      EXAMCHAIN
+    </div>
+
+    <nav class="header-nav">
+      <button class="nav-btn active" onclick="showPage('exam')">EXAM</button>
+      <button class="nav-btn"        onclick="showPage('verify')">VERIFY</button>
+      <button class="nav-btn"        onclick="showPage('admin')">ADMIN</button>
+      <button class="nav-btn"        onclick="showPage('setup')">SETUP</button>
+    </nav>
+
+    <!-- Blockchain status indicator (no wallet needed) -->
+    <div class="chain-status">
+      <div class="chain-dot" id="chain-dot"></div>
+      <span id="chain-label" style="font-family:var(--mono);font-size:11px;color:var(--muted)">
+        BLOCKCHAIN READY
+      </span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════
+       LEFT SIDEBAR
+  ════════════════════════════════════ -->
+  <aside class="sidebar-left">
+
+    <!-- Session Config -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Session Config</div>
+      <div class="form-group">
+        <label class="form-label">STUDENT ID</label>
+        <input class="form-input" id="student-id" value="STU-001" placeholder="Student ID"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">EXAM ID</label>
+        <input class="form-input" id="exam-id" value="EXAM-CS101" placeholder="Exam ID"/>
+      </div>
+      <button class="btn-primary" id="start-btn"    onclick="startExam()">▶ START EXAM</button>
+      <button class="btn-danger"  id="finalize-btn" onclick="finalizeLog()" disabled>⬡ FINALIZE & STORE</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Session Status -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Session Status</div>
+      <div style="margin-bottom:12px;">
+        <div id="session-status" class="status-badge idle">IDLE</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-value"        id="stat-events">0</span>
+          <span class="stat-label">Events</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value warn"   id="stat-score">0</span>
+          <span class="stat-label">Risk Score</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value"        id="stat-tabs">0</span>
+          <span class="stat-label">Tab Sw.</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value danger" id="stat-copy">0</span>
+          <span class="stat-label">Copy/Paste</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Backend URL -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Backend</div>
+      <div class="form-group">
+        <label class="form-label">API URL</label>
+        <input class="form-input" id="api-url" value="http://localhost:3001"/>
+      </div>
+      <div class="config-note" id="api-status">● Checking connection...</div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ── EXAM PAGE ── -->
+    <section class="page active" id="page-exam">
+
+      <!-- Exam header bar -->
+      <div class="exam-header">
+        <div>
+          <div class="exam-title">COMPUTER SCIENCE 101 — FINAL EXAMINATION</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;">
+            Session: <span id="session-id-display">—</span>
+          </div>
+        </div>
+        <div class="timer-display" id="exam-timer">00:00:00</div>
+      </div>
+
+      <!-- Time progress bar -->
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+
+      <!-- Exam questions -->
+      <div class="exam-body">
+        <div class="exam-instructions">
+          ⚠ INTEGRITY NOTICE: This exam is monitored. Tab switching, copy/paste, and extended
+          inactivity are logged and stored immutably on the blockchain. Suspicious behaviour will be flagged.
+        </div>
+
+        <div class="exam-question">
+          <div class="question-number">QUESTION 01 / 05</div>
+          <div class="question-text">
+            What is the time complexity of a binary search algorithm operating on a sorted array of n elements?
+          </div>
+          <div class="options-grid">
+            <div class="option-item" onclick="selectOption(this,'A')"><span class="option-letter">A</span> O(n)</div>
+            <div class="option-item" onclick="selectOption(this,'B')"><span class="option-letter">B</span> O(log n)</div>
+            <div class="option-item" onclick="selectOption(this,'C')"><span class="option-letter">C</span> O(n²)</div>
+            <div class="option-item" onclick="selectOption(this,'D')"><span class="option-letter">D</span> O(1)</div>
+          </div>
+        </div>
+
+        <div class="exam-question">
+          <div class="question-number">QUESTION 02 / 05</div>
+          <div class="question-text">
+            In object-oriented programming, which principle states that a subclass should be substitutable for its superclass?
+          </div>
+          <div class="options-grid">
+            <div class="option-item" onclick="selectOption(this,'A')"><span class="option-letter">A</span> Open/Closed Principle</div>
+            <div class="option-item" onclick="selectOption(this,'B')"><span class="option-letter">B</span> Interface Segregation</div>
+            <div class="option-item" onclick="selectOption(this,'C')"><span class="option-letter">C</span> Liskov Substitution Principle</div>
+            <div class="option-item" onclick="selectOption(this,'D')"><span class="option-letter">D</span> Dependency Inversion</div>
+          </div>
+        </div>
+
+        <div class="exam-question">
+          <div class="question-number">QUESTION 03 / 05</div>
+          <div class="question-text">
+            Which data structure operates on a LIFO (Last-In, First-Out) principle?
+          </div>
+          <div class="options-grid">
+            <div class="option-item" onclick="selectOption(this,'A')"><span class="option-letter">A</span> Queue</div>
+            <div class="option-item" onclick="selectOption(this,'B')"><span class="option-letter">B</span> Stack</div>
+            <div class="option-item" onclick="selectOption(this,'C')"><span class="option-letter">C</span> Heap</div>
+            <div class="option-item" onclick="selectOption(this,'D')"><span class="option-letter">D</span> Linked List</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live event log feed -->
+      <div class="log-feed">
+        <div class="log-feed-header">
+          <span>⬡ LIVE EVENT LOG</span>
+          <span id="log-count" style="color:var(--accent)">0 EVENTS</span>
+        </div>
+        <div id="event-feed"></div>
+      </div>
+
+    </section>
+
+    <!-- ── VERIFY PAGE ── -->
+    <section class="page" id="page-verify">
+
+      <div class="blockchain-card">
+        <div class="bc-title">⬡ INTEGRITY VERIFICATION MODULE</div>
+
+        <div class="form-group">
+          <label class="form-label">IPFS CID</label>
+          <input class="form-input" id="verify-cid" placeholder="Qm... or bafybeig..." style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ORIGINAL SHA-256 HASH</label>
+          <input class="form-input" id="verify-hash" placeholder="64-character hex hash" style="width:100%"/>
+        </div>
+
+        <button class="btn-secondary" onclick="verifyIntegrity()" style="margin-top:0">
+          🔍 VERIFY INTEGRITY
+        </button>
+
+        <div id="verify-result" class="verify-result pending" style="margin-top:16px;">
+          <div class="verify-icon">🔒</div>
+          <div class="verify-status">AWAITING VERIFICATION</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px;font-family:var(--mono)">
+            Enter CID and hash above to verify
+          </div>
+        </div>
+      </div>
+
+      <!-- Blockchain record lookup -->
+      <div class="blockchain-card">
+        <div class="bc-title">⬡ BLOCKCHAIN RECORD LOOKUP</div>
+        <div class="form-group">
+          <label class="form-label">BATCH ID</label>
+          <input class="form-input" id="fetch-batch-id" placeholder="UUID batch ID" style="width:100%"/>
+        </div>
+        <button class="btn-secondary" onclick="fetchFromChain()" style="margin-top:0">
+          ⬡ FETCH RECORD
+        </button>
+        <div id="chain-fetch-result" style="margin-top:12px;"></div>
+      </div>
+
+    </section>
+
+    <!-- ── ADMIN PAGE ── -->
+    <section class="page" id="page-admin">
+
+      <!-- Summary stats -->
+      <div class="admin-grid">
+        <div class="admin-card">
+          <div class="admin-card-value" id="admin-total-sessions">0</div>
+          <div class="admin-card-label">Active Sessions</div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-value" id="admin-total-events">0</div>
+          <div class="admin-card-label">Total Events</div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-value" style="color:var(--warn)" id="admin-avg-score">0</div>
+          <div class="admin-card-label">Avg Risk Score</div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-value" style="color:var(--danger)" id="admin-flagged">0</div>
+          <div class="admin-card-label">Flagged Students</div>
+        </div>
+      </div>
+
+      <!-- Live sessions table -->
+      <div class="blockchain-card">
+        <div class="bc-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>⬡ ACTIVE SESSIONS</span>
+          <button class="nav-btn" onclick="refreshAdmin()">↻ REFRESH</button>
+        </div>
+        <table class="student-table" id="sessions-table">
+          <thead>
+            <tr>
+              <th>Session ID</th>
+              <th>Student</th>
+              <th>Exam</th>
+              <th>Events</th>
+              <th>Risk Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-tbody">
+            <tr>
+              <td colspan="6" class="empty-state">No active sessions. Start an exam to see data here.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Scoring legend -->
+      <div class="blockchain-card">
+        <div class="bc-title">⬡ SCORING LEGEND</div>
+        <table class="student-table">
+          <thead>
+            <tr><th>Event Type</th><th>Points</th><th>Severity</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Tab Switch</td> <td>+2</td><td><span class="score-chip medium">MEDIUM</span></td></tr>
+            <tr><td>Copy / Paste</td><td>+5</td><td><span class="score-chip high">HIGH</span></td></tr>
+            <tr><td>Cut</td>        <td>+4</td><td><span class="score-chip high">HIGH</span></td></tr>
+            <tr><td>Idle (30s)</td> <td>+3</td><td><span class="score-chip medium">MEDIUM</span></td></tr>
+            <tr><td>Right Click</td><td>+1</td><td><span class="score-chip low">LOW</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- ── SETUP PAGE ── -->
+    <section class="page" id="page-setup">
+
+      <!-- Contract address input -->
+      <div class="blockchain-card">
+        <div class="bc-title">⬡ CONTRACT CONFIGURATION</div>
+        <div class="form-group">
+          <label class="form-label">CONTRACT ADDRESS (deployed via Remix IDE)</label>
+          <input class="form-input" id="contract-address" placeholder="0x..." style="width:100%"
+                 oninput="saveConfig()"/>
+        </div>
+        <div class="config-note">
+          Deploy ExamLogger.sol via Remix IDE, then paste the contract address above.<br>
+          The system stores exam logs on IPFS and records proof on the blockchain automatically.
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="blockchain-card">
+        <div class="bc-title">⬡ HOW THE SYSTEM WORKS</div>
+        <div style="font-family:var(--mono);font-size:12px;line-height:2;color:var(--text);">
+
+          <div style="color:var(--accent);margin-bottom:8px;">STEP 1 — Start Exam</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
+            Enter Student ID and Exam ID → click START EXAM<br>
+            All student actions are now being monitored in real time
+          </div>
+
+          <div style="color:var(--accent);margin-bottom:8px;">STEP 2 — Events Are Captured</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
+            Tab switches, copy/paste, right clicks, and idle time<br>
+            are all logged and sent to the backend server
+          </div>
+
+          <div style="color:var(--accent);margin-bottom:8px;">STEP 3 — Finalize & Store</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
+            Click FINALIZE & STORE when exam ends<br>
+            Backend batches all events → generates SHA-256 hash<br>
+            Uploads JSON file to IPFS → receives CID
+          </div>
+
+          <div style="color:var(--accent);margin-bottom:8px;">STEP 4 — Blockchain Storage</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
+            CID and hash are stored permanently on the blockchain<br>
+            via the ExamLogger smart contract<br>
+            This record can never be changed or deleted
+          </div>
+
+          <div style="color:var(--accent);margin-bottom:8px;">STEP 5 — Verify Integrity</div>
+          <div style="color:var(--muted);margin-left:16px;">
+            Go to VERIFY tab → paste CID and hash<br>
+            System fetches file from IPFS → recomputes hash<br>
+            Compares with blockchain record → shows VALID or TAMPERED
+          </div>
+        </div>
+      </div>
+
+      <!-- ABI viewer -->
+      <div class="blockchain-card">
+        <div class="bc-title">⬡ CONTRACT ABI (for reference)</div>
+        <textarea id="abi-display" readonly style="
+          width:100%; height:200px;
+          background:var(--surface2); border:1px solid var(--border);
+          color:var(--muted); font-family:var(--mono); font-size:10px;
+          padding:12px; resize:vertical; outline:none; line-height:1.5;">
+        </textarea>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════
+       RIGHT SIDEBAR — Risk Score Panel
+  ════════════════════════════════════ -->
+  <aside class="sidebar-right">
+
+    <div class="sidebar-label">Risk Score</div>
+    <div class="score-ring">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#1a3040" stroke-width="8"/>
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#00e5a0"
+          stroke-width="8" stroke-linecap="square"
+          stroke-dasharray="251.2" stroke-dashoffset="251.2"
+          id="score-ring-circle"/>
+      </svg>
+      <div class="score-ring-text">
+        <span class="score-num" id="score-ring-val">0</span>
+        <span class="score-sub">RISK</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sidebar-label">Event Breakdown</div>
+
+    <div class="event-type-bar">
+      <div class="etb-header">
+        <span class="etb-label">TAB SWITCH</span>
+        <span class="etb-count" id="bar-tab">0</span>
+      </div>
+      <div class="etb-bar-bg"><div class="etb-bar-fill warn" id="fill-tab" style="width:0%"></div></div>
+    </div>
+
+    <div class="event-type-bar">
+      <div class="etb-header">
+        <span class="etb-label">COPY/PASTE</span>
+        <span class="etb-count" id="bar-copy">0</span>
+      </div>
+      <div class="etb-bar-bg"><div class="etb-bar-fill danger" id="fill-copy" style="width:0%"></div></div>
+    </div>
+
+    <div class="event-type-bar">
+      <div class="etb-header">
+        <span class="etb-label">IDLE</span>
+        <span class="etb-count" id="bar-idle">0</span>
+      </div>
+      <div class="etb-bar-bg"><div class="etb-bar-fill" id="fill-idle" style="width:0%"></div></div>
+    </div>
+
+    <div class="event-type-bar">
+      <div class="etb-header">
+        <span class="etb-label">RIGHT CLICK</span>
+        <span class="etb-count" id="bar-rc">0</span>
+      </div>
+      <div class="etb-bar-bg"><div class="etb-bar-fill info" id="fill-rc" style="width:0%"></div></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sidebar-label">Last Chain TX</div>
+    <div id="last-tx-display" style="font-family:var(--mono);font-size:10px;color:var(--muted);
+      padding:10px;background:var(--surface2);border:1px solid var(--border);
+      word-break:break-all;line-height:1.6;">
+      No transaction yet
+    </div>
+
+    <div class="divider"></div>
+    <div class="sidebar-label">IPFS CID</div>
+    <div id="last-cid-display" style="font-family:var(--mono);font-size:10px;color:var(--muted);
+      padding:10px;background:var(--surface2);border:1px solid var(--border);
+      word-break:break-all;line-height:1.6;">
+      No CID yet
+    </div>
+
+  </aside>
+
+</div><!-- /.app-grid -->
+
+<!-- Alert overlay (toasts) -->
+<div class="alert-overlay" id="alert-overlay"></div>
+
+<!-- Contract ABI data — read by app.js at startup -->
+<script id="contract-abi-data" type="application/json">
+[
+  {"inputs":[],"name":"getAllBatchIds","outputs":[{"internalType":"string[]","name":"","type":"string[]"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"string","name":"batchId","type":"string"}],"name":"getLog","outputs":[
+    {"internalType":"string","name":"cid","type":"string"},
+    {"internalType":"string","name":"sha256Hash","type":"string"},
+    {"internalType":"string","name":"studentId","type":"string"},
+    {"internalType":"string","name":"examId","type":"string"},
+    {"internalType":"uint256","name":"timestamp","type":"uint256"},
+    {"internalType":"address","name":"submitter","type":"address"},
+    {"internalType":"uint256","name":"eventCount","type":"uint256"},
+    {"internalType":"uint256","name":"cheatScore","type":"uint256"}
+  ],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"string","name":"studentId","type":"string"}],"name":"getStudentBatches","outputs":[{"internalType":"string[]","name":"","type":"string[]"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"getTotalBatches","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[
+    {"internalType":"string","name":"batchId","type":"string"},
+    {"internalType":"string","name":"cid","type":"string"},
+    {"internalType":"string","name":"sha256Hash","type":"string"},
+    {"internalType":"string","name":"studentId","type":"string"},
+    {"internalType":"string","name":"examId","type":"string"},
+    {"internalType":"uint256","name":"eventCount","type":"uint256"},
+    {"internalType":"uint256","name":"cheatScore","type":"uint256"}
+  ],"name":"storeLog","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"anonymous":false,"inputs":[
+    {"indexed":true,"internalType":"string","name":"batchId","type":"string"},
+    {"indexed":false,"internalType":"string","name":"cid","type":"string"},
+    {"indexed":false,"internalType":"string","name":"studentId","type":"string"},
+    {"indexed":false,"internalType":"string","name":"examId","type":"string"},
+    {"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},
+    {"indexed":false,"internalType":"address","name":"submitter","type":"address"},
+    {"indexed":false,"internalType":"uint256","name":"cheatScore","type":"uint256"}
+  ],"name":"LogStored","type":"event"}
+]
+</script>
+
+<!-- All JavaScript logic lives in app.js -->
+<script src="app.js"></script>
+
+</body>
+</html>
