@@ -1,0 +1,25 @@
+{
+  "name": "anti-cheating-system",
+  "version": "1.0.0",
+  "description": "A decentralized application (dApp) that captures student behavior during online exams,\r stores logs on IPFS, and records proof-of-integrity hashes on the Ethereum blockchain via Ganache.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnoushkaNavale/anti-cheating-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AnoushkaNavale/anti-cheating-system/issues"
+  },
+  "homepage": "https://github.com/AnoushkaNavale/anti-cheating-system#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
