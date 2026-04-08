@@ -419,7 +419,7 @@ async function verifyIntegrity() {
     if (data.valid) {
       resultEl.className = 'verify-result valid';
       resultEl.innerHTML = `
-        <div class="verify-icon">✅</div>
+        <div class="verify-icon"></div>
         <div class="verify-status">VALID</div>
         <div style="font-size:11px;color:var(--muted);margin-top:8px;font-family:var(--mono)">
           Data is untampered and authentic
@@ -430,7 +430,7 @@ async function verifyIntegrity() {
     } else {
       resultEl.className = 'verify-result tampered';
       resultEl.innerHTML = `
-        <div class="verify-icon">🚨</div>
+        <div class="verify-icon"></div>
         <div class="verify-status">TAMPERED</div>
         <div style="font-size:11px;color:var(--danger);margin-top:8px;font-family:var(--mono)">
           Hash mismatch detected! Data may have been altered.
@@ -470,7 +470,7 @@ async function fetchFromChain() {
       <div style="font-family:var(--mono);font-size:11px;color:var(--text);margin-top:8px;line-height:1.8">
         Student: ${record.studentId} | Exam: ${record.examId}<br>
         Events: ${record.eventCount} | Risk Score: ${record.cheatScore}<br>
-        Verdict: ${record.cheated ? '🚨 CHEATED' : '✅ CLEAN'}<br>
+        Verdict: ${record.cheated ? ' CHEATED' : ' CLEAN'}<br>
         IPFS Source: ${record.ipfsSource || 'Unknown'}<br>
         Stored at: ${new Date(record.storedAt).toLocaleString()}
       </div>`;
