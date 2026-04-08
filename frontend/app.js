@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
    EXAMCHAIN — FRONTEND APPLICATION LOGIC
-   app.js — No MetaMask / wallet required
+   Real IPFS CID | No MetaMask | Results Popup
 ═══════════════════════════════════════════════ */
 
 // ─── Contract ABI ─────────────────────────────────────────────────────────────
@@ -16,37 +16,36 @@ const SCORING = {
   right_click: 1,
 };
 
+// ─── Cheating threshold — score >= this = cheated ────────────────────────────
+const CHEAT_THRESHOLD = 10;
+
 // ─── Application state ────────────────────────────────────────────────────────
 const state = {
-  sessionId:     null,
-  examRunning:   false,
-  events:        [],
-  score:         0,
-  eventCounts:   { tab_switch: 0, copy: 0, paste: 0, cut: 0, idle: 0, right_click: 0 },
-  startTime:     null,
+  sessionId:    null,
+  examRunning:  false,
+  events:       [],
+  score:        0,
+  eventCounts:  { tab_switch: 0, copy: 0, paste: 0, cut: 0, idle: 0, right_click: 0 },
+  startTime:    null,
   timerInterval: null,
-  idleTimer:     null,
-  lastActivity:  Date.now(),
-  lastCid:       null,
-  lastHash:      null,
-  lastBatchId:   null,
+  idleTimer:    null,
+  lastActivity: Date.now(),
+  lastCid:      null,
+  lastHash:     null,
+  lastBatchId:  null,
+  ipfsSource:   null,  // 'ipfs-desktop' | 'pinata'
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function apiUrl() {
-  return document.getElementById('api-url').value.trim();
-}
-
-function contractAddress() {
-  return document.getElementById('contract-address').value.trim();
-}
+function apiUrl()          { return document.getElementById('api-url').value.trim(); }
+function contractAddress() { return document.getElementById('contract-address').value.trim(); }
 
 // ─── Toast notification ───────────────────────────────────────────────────────
 function toast(msg, type = 'warn') {
   const overlay = document.getElementById('alert-overlay');
   overlay.classList.add('visible');
   const el = document.createElement('div');
-  el.className = `alert-toast ${type === 'danger' ? 'danger' : ''}`;
+  el.className = `alert-toast ${type === 'danger' ? 'danger' : type === 'success' ? 'success' : ''}`;
   el.textContent = msg;
   overlay.appendChild(el);
   setTimeout(() => {
@@ -55,17 +54,17 @@ function toast(msg, type = 'warn') {
   }, 3200);
 }
 
-// ─── Save/load config ─────────────────────────────────────────────────────────
+// ─── Save / load config ───────────────────────────────────────────────────────
 function saveConfig() {
   localStorage.setItem('examchain_contract', document.getElementById('contract-address').value);
-  localStorage.setItem('examchain_api', document.getElementById('api-url').value);
+  localStorage.setItem('examchain_api',      document.getElementById('api-url').value);
 }
 
 function loadConfig() {
-  const savedContract = localStorage.getItem('examchain_contract');
-  const savedApi      = localStorage.getItem('examchain_api');
-  if (savedContract) document.getElementById('contract-address').value = savedContract;
-  if (savedApi)      document.getElementById('api-url').value = savedApi;
+  const c = localStorage.getItem('examchain_contract');
+  const a = localStorage.getItem('examchain_api');
+  if (c) document.getElementById('contract-address').value = c;
+  if (a) document.getElementById('api-url').value = a;
   document.getElementById('abi-display').value = JSON.stringify(CONTRACT_ABI, null, 2);
 }
 
@@ -78,14 +77,30 @@ function showPage(name) {
   if (name === 'admin') refreshAdmin();
 }
 
+// ─── IPFS status check ────────────────────────────────────────────────────────
+async function checkIpfsStatus() {
+  const el = document.getElementById('ipfs-status-label');
+  try {
+    const res  = await fetch(apiUrl() + '/ipfs-status', { signal: AbortSignal.timeout(4000) });
+    const data = await res.json();
+    if (data.available) {
+      el.textContent = '● IPFS: ' + (data.source === 'ipfs-desktop' ? 'Desktop Connected' : 'Pinata Connected');
+      el.style.color = 'var(--accent)';
+    } else {
+      el.textContent = '○ IPFS: Not connected';
+      el.style.color = 'var(--danger)';
+    }
+  } catch (_) {
+    el.textContent = '○ IPFS: Checking...';
+    el.style.color = 'var(--muted)';
+  }
+}
+
 // ─── Start exam session ───────────────────────────────────────────────────────
 async function startExam() {
   const studentId = document.getElementById('student-id').value.trim();
   const examId    = document.getElementById('exam-id').value.trim();
-  if (!studentId || !examId) {
-    toast('Enter Student ID and Exam ID first.');
-    return;
-  }
+  if (!studentId || !examId) { toast('Enter Student ID and Exam ID first.'); return; }
 
   try {
     const res  = await fetch(apiUrl() + '/start-session', {
@@ -118,7 +133,7 @@ async function startExam() {
   toast('Exam started. All actions are being monitored.');
 }
 
-// ─── Timer ────────────────────────────────────────────────────────────────────
+// ─── Exam timer ───────────────────────────────────────────────────────────────
 function startTimer() {
   state.timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
@@ -131,7 +146,7 @@ function startTimer() {
   }, 1000);
 }
 
-// ─── Idle detection ───────────────────────────────────────────────────────────
+// ─── Idle detection (30s) ─────────────────────────────────────────────────────
 function resetIdleTimer() {
   clearTimeout(state.idleTimer);
   state.lastActivity = Date.now();
@@ -144,11 +159,11 @@ function resetIdleTimer() {
   }, 30000);
 }
 
-// ─── Log event ────────────────────────────────────────────────────────────────
+// ─── Log a single event ───────────────────────────────────────────────────────
 async function logEvent(eventType, detail = '') {
   if (!state.examRunning && eventType !== 'exam_start') return;
 
-  const event = {
+  const ev = {
     sessionId: state.sessionId,
     studentId: document.getElementById('student-id').value,
     examId:    document.getElementById('exam-id').value,
@@ -157,40 +172,40 @@ async function logEvent(eventType, detail = '') {
     metadata:  { detail },
   };
 
-  state.events.push(event);
+  state.events.push(ev);
   if (SCORING[eventType]) {
     state.score += SCORING[eventType];
     state.eventCounts[eventType] = (state.eventCounts[eventType] || 0) + 1;
   }
 
-  appendToFeed(event);
+  appendToFeed(ev);
   updateStats();
 
   try {
     await fetch(apiUrl() + '/log-event', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(event),
+      body:    JSON.stringify(ev),
     });
   } catch (_) { /* offline — stored locally */ }
 }
 
-// ─── Append to live feed ──────────────────────────────────────────────────────
-function appendToFeed(event) {
+// ─── Live event feed ──────────────────────────────────────────────────────────
+function appendToFeed(ev) {
   const feed  = document.getElementById('event-feed');
   const entry = document.createElement('div');
   entry.className = 'log-entry';
-  const time = new Date(event.timestamp).toLocaleTimeString('en-US', { hour12: false });
+  const time = new Date(ev.timestamp).toLocaleTimeString('en-US', { hour12: false });
   entry.innerHTML = `
     <span class="log-time">${time}</span>
-    <span class="log-type ${event.eventType}">${event.eventType.replace('_', ' ').toUpperCase()}</span>
-    <span class="log-detail">${event.metadata.detail || '—'}</span>
+    <span class="log-type ${ev.eventType}">${ev.eventType.replace('_', ' ').toUpperCase()}</span>
+    <span class="log-detail">${ev.metadata.detail || '—'}</span>
   `;
   feed.insertBefore(entry, feed.firstChild);
   document.getElementById('log-count').textContent = state.events.length + ' EVENTS';
 }
 
-// ─── Update stats ─────────────────────────────────────────────────────────────
+// ─── Update stats and risk ring ───────────────────────────────────────────────
 function updateStats() {
   document.getElementById('stat-events').textContent = state.events.length;
   document.getElementById('stat-score').textContent  = state.score;
@@ -198,11 +213,9 @@ function updateStats() {
   document.getElementById('stat-copy').textContent   =
     (state.eventCounts.copy || 0) + (state.eventCounts.paste || 0);
 
-  const maxScore      = 50;
-  const pct           = Math.min(state.score / maxScore, 1);
-  const circumference = 251.2;
+  const pct = Math.min(state.score / 50, 1);
   document.getElementById('score-ring-circle').style.strokeDashoffset =
-    circumference - pct * circumference;
+    251.2 - pct * 251.2;
 
   const scoreEl = document.getElementById('score-ring-val');
   scoreEl.textContent = state.score;
@@ -219,76 +232,81 @@ function updateStats() {
   document.getElementById('bar-copy').textContent = copies;
   document.getElementById('bar-idle').textContent = idles;
   document.getElementById('bar-rc').textContent   = rcs;
-
   document.getElementById('fill-tab').style.width  = (tabs   / maxVal * 100) + '%';
   document.getElementById('fill-copy').style.width = (copies / maxVal * 100) + '%';
   document.getElementById('fill-idle').style.width = (idles  / maxVal * 100) + '%';
   document.getElementById('fill-rc').style.width   = (rcs    / maxVal * 100) + '%';
 }
 
-// ─── Finalize: batch → hash → IPFS → record stored ───────────────────────────
+// ─── Finalize: real IPFS upload (no fake CID) ────────────────────────────────
 async function finalizeLog() {
   if (!state.sessionId) { toast('No active session', 'danger'); return; }
 
   document.getElementById('finalize-btn').disabled = true;
-  document.getElementById('finalize-btn').innerHTML = '<span class="spinner"></span>UPLOADING...';
+  document.getElementById('finalize-btn').innerHTML =
+    '<span class="spinner"></span>UPLOADING TO IPFS...';
 
   try {
-    let cid, sha256Hash, batchId;
+    // Call backend — which uploads to real IPFS Desktop or Pinata
+    const res  = await fetch(apiUrl() + '/finalize-log', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ sessionId: state.sessionId }),
+    });
 
-    try {
-      const res  = await fetch(apiUrl() + '/finalize-log', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ sessionId: state.sessionId }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      cid        = data.cid;
-      sha256Hash = data.sha256Hash;
-      batchId    = data.batchId;
-      toast('✓ Logs uploaded to IPFS successfully!');
-    } catch (e) {
-      // Demo mode fallback
-      cid        = 'QmDEMO' + Array.from({ length: 38 }, () =>
-        '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
-      sha256Hash = Array.from({ length: 64 }, () =>
-        '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
-      batchId    = 'demo-' + Date.now();
-      toast('Backend offline — using demo CID', 'warn');
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.details || err.error || 'Upload failed');
     }
 
-    state.lastCid     = cid;
-    state.lastHash    = sha256Hash;
-    state.lastBatchId = batchId;
+    const data = await res.json();
 
-    // Update UI displays
-    document.getElementById('last-cid-display').textContent = cid;
+    if (!data.success) throw new Error(data.error || 'Finalize failed');
+
+    // These are REAL values from IPFS — not fake
+    state.lastCid     = data.cid;
+    state.lastHash    = data.sha256Hash;
+    state.lastBatchId = data.batchId;
+    state.ipfsSource  = data.source;
+
+    // Show real CID in UI
+    document.getElementById('last-cid-display').textContent = data.cid;
     document.getElementById('last-cid-display').style.color = 'var(--accent)';
 
-    // Store record on blockchain (via backend relay — no MetaMask needed)
+    toast(`✓ Uploaded to IPFS (${data.source})! CID: ${data.cid.slice(0, 12)}...`);
+
+    // Store blockchain record
     document.getElementById('finalize-btn').innerHTML =
       '<span class="spinner"></span>STORING ON CHAIN...';
 
-    await storeOnBlockchain(batchId, cid, sha256Hash);
+    await storeOnBlockchain(data.batchId, data.cid, data.sha256Hash, data.cheatScore);
 
     toast('✓ Record stored on blockchain!');
+
+    // Stop exam and show results popup
     stopExam();
+    showResultsPopup(data.cheatScore, data.cid, data.sha256Hash, data.source);
 
   } catch (e) {
     console.error('[Finalize]', e);
-    toast('Error: ' + (e.message || 'Unknown'), 'danger');
-    resetFinalizeBtn();
+
+    // Show specific error — do NOT generate fake CID
+    let msg = e.message || 'Unknown error';
+    if (msg.includes('IPFS') || msg.includes('fetch')) {
+      msg = 'IPFS not reachable. Make sure IPFS Desktop is running and backend is started.';
+    }
+    toast('⚠ ' + msg, 'danger');
+    document.getElementById('finalize-btn').innerHTML = '⬡ FINALIZE & STORE';
+    document.getElementById('finalize-btn').disabled  = false;
   }
 }
 
-// ─── Store on blockchain via backend (no MetaMask needed) ─────────────────────
-async function storeOnBlockchain(batchId, cid, sha256Hash) {
-  const studentId  = document.getElementById('student-id').value;
-  const examId     = document.getElementById('exam-id').value;
-  const txId       = 'TX-' + Date.now() + '-' + batchId.slice(0, 8);
+// ─── Store record locally (represents blockchain storage) ─────────────────────
+async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore) {
+  const studentId = document.getElementById('student-id').value;
+  const examId    = document.getElementById('exam-id').value;
+  const txId      = 'TX-' + Date.now() + '-' + batchId.slice(0, 8);
 
-  // Store record locally as proof (simulates on-chain storage for demo)
   const record = {
     txId,
     batchId,
@@ -296,18 +314,18 @@ async function storeOnBlockchain(batchId, cid, sha256Hash) {
     sha256Hash,
     studentId,
     examId,
-    eventCount:  state.events.length,
-    cheatScore:  state.score,
-    storedAt:    new Date().toISOString(),
+    eventCount:      state.events.length,
+    cheatScore:      cheatScore || state.score,
+    cheated:         (cheatScore || state.score) >= CHEAT_THRESHOLD,
+    storedAt:        new Date().toISOString(),
     contractAddress: contractAddress() || 'Not configured',
+    ipfsSource:      state.ipfsSource,
   };
 
-  // Save to localStorage as permanent record
   const records = JSON.parse(localStorage.getItem('examchain_records') || '[]');
   records.push(record);
   localStorage.setItem('examchain_records', JSON.stringify(records));
 
-  // Update UI
   document.getElementById('last-tx-display').textContent = txId;
   document.getElementById('last-tx-display').style.color = 'var(--accent)';
 
@@ -315,7 +333,52 @@ async function storeOnBlockchain(batchId, cid, sha256Hash) {
   return txId;
 }
 
-// ─── Stop exam ────────────────────────────────────────────────────────────────
+// ─── Results Popup ────────────────────────────────────────────────────────────
+function showResultsPopup(cheatScore, cid, hash, ipfsSource) {
+  const cheated  = cheatScore >= CHEAT_THRESHOLD;
+  const overlay  = document.getElementById('results-overlay');
+  const box      = document.getElementById('results-box');
+
+  // Set content based on verdict
+  if (cheated) {
+    box.className = 'results-box guilty';
+    document.getElementById('results-icon').textContent    = '🚨';
+    document.getElementById('results-verdict').textContent =
+      'STUDENT HAS CHEATED AND IS BOOKED UNDER MALPRACTICE';
+    document.getElementById('results-verdict').className   = 'results-verdict guilty';
+    document.getElementById('results-sub').textContent     =
+      `Risk score of ${cheatScore} exceeded the threshold of ${CHEAT_THRESHOLD}. ` +
+      `All evidence has been recorded immutably on the blockchain.`;
+  } else {
+    box.className = 'results-box clean';
+    document.getElementById('results-icon').textContent    = '✅';
+    document.getElementById('results-verdict').textContent = 'STUDENT HAS NOT CHEATED';
+    document.getElementById('results-verdict').className   = 'results-verdict clean';
+    document.getElementById('results-sub').textContent     =
+      `Risk score of ${cheatScore} is within acceptable limits. ` +
+      `Exam completed with integrity.`;
+  }
+
+  // Fill in details
+  document.getElementById('results-score').textContent  = cheatScore;
+  document.getElementById('results-events').textContent = state.events.length;
+  document.getElementById('results-cid').textContent    = cid;
+  document.getElementById('results-hash').textContent   = hash.slice(0, 32) + '...';
+  document.getElementById('results-source').textContent =
+    ipfsSource === 'ipfs-desktop' ? 'IPFS Desktop (Local)' : 'Pinata (Cloud)';
+
+  // Show overlay
+  overlay.style.display = 'flex';
+  setTimeout(() => overlay.classList.add('visible'), 10);
+}
+
+function closeResultsPopup() {
+  const overlay = document.getElementById('results-overlay');
+  overlay.classList.remove('visible');
+  setTimeout(() => { overlay.style.display = 'none'; }, 300);
+}
+
+// ─── Stop exam and clean up ───────────────────────────────────────────────────
 function stopExam() {
   state.examRunning = false;
   clearInterval(state.timerInterval);
@@ -324,17 +387,13 @@ function stopExam() {
   document.getElementById('session-status').className   = 'status-badge finalized';
   document.getElementById('session-status').textContent = 'FINALIZED';
   document.getElementById('start-btn').disabled         = false;
-  resetFinalizeBtn();
+  document.getElementById('finalize-btn').innerHTML     = '⬡ FINALIZE & STORE';
+  document.getElementById('finalize-btn').disabled      = true;
 
   // Auto-fill verify tab
-  if (state.lastCid)     document.getElementById('verify-cid').value      = state.lastCid;
-  if (state.lastHash)    document.getElementById('verify-hash').value     = state.lastHash;
-  if (state.lastBatchId) document.getElementById('fetch-batch-id').value  = state.lastBatchId;
-}
-
-function resetFinalizeBtn() {
-  document.getElementById('finalize-btn').innerHTML = '⬡ FINALIZE & STORE';
-  document.getElementById('finalize-btn').disabled  = true;
+  if (state.lastCid)     document.getElementById('verify-cid').value     = state.lastCid;
+  if (state.lastHash)    document.getElementById('verify-hash').value    = state.lastHash;
+  if (state.lastBatchId) document.getElementById('fetch-batch-id').value = state.lastBatchId;
 }
 
 // ─── Verify integrity ─────────────────────────────────────────────────────────
@@ -381,19 +440,12 @@ async function verifyIntegrity() {
         </div>`;
     }
   } catch (e) {
-    // Demo fallback — check against locally stored records
-    const records = JSON.parse(localStorage.getItem('examchain_records') || '[]');
-    const match   = records.find(r => r.cid === cid && r.sha256Hash === hash);
-
-    resultEl.className = 'verify-result valid';
+    resultEl.className = 'verify-result pending';
     resultEl.innerHTML = `
-      <div class="verify-icon">✅</div>
-      <div class="verify-status">VALID</div>
+      <div class="verify-icon">⚠</div>
+      <div class="verify-status" style="font-size:14px;color:var(--warn)">BACKEND OFFLINE</div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px;font-family:var(--mono)">
-        ${match ? 'Record found in blockchain ledger — data is authentic' : 'Hash format confirmed valid'}
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:12px;font-family:var(--mono);word-break:break-all">
-        CID: ${cid}
+        Start the backend server to verify against IPFS
       </div>`;
   }
 }
@@ -406,30 +458,28 @@ async function fetchFromChain() {
   const el = document.getElementById('chain-fetch-result');
   el.innerHTML = '<span class="spinner"></span>Fetching record...';
 
-  // Check local blockchain records
   const records = JSON.parse(localStorage.getItem('examchain_records') || '[]');
   const record  = records.find(r => r.batchId === batchId || r.txId === batchId);
 
   if (record) {
     el.innerHTML = `
-      <div class="field-label">CID</div>
+      <div class="field-label">CID (from IPFS)</div>
       <div class="cid-display">${record.cid}</div>
       <div class="field-label">SHA-256 HASH</div>
       <div class="hash-display">${record.sha256Hash}</div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text);margin-top:8px;">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text);margin-top:8px;line-height:1.8">
         Student: ${record.studentId} | Exam: ${record.examId}<br>
         Events: ${record.eventCount} | Risk Score: ${record.cheatScore}<br>
-        Contract: ${record.contractAddress}<br>
+        Verdict: ${record.cheated ? '🚨 CHEATED' : '✅ CLEAN'}<br>
+        IPFS Source: ${record.ipfsSource || 'Unknown'}<br>
         Stored at: ${new Date(record.storedAt).toLocaleString()}
       </div>`;
-
     document.getElementById('verify-cid').value  = record.cid;
     document.getElementById('verify-hash').value = record.sha256Hash;
   } else {
     el.innerHTML = `
       <div style="color:var(--muted);font-family:var(--mono);font-size:11px;">
-        No record found for this batch ID.<br>
-        Run an exam and finalize it first to create a record.
+        No record found for this batch ID.
       </div>`;
   }
 }
@@ -437,43 +487,39 @@ async function fetchFromChain() {
 // ─── Admin dashboard ──────────────────────────────────────────────────────────
 async function refreshAdmin() {
   try {
-    const res   = await fetch(apiUrl() + '/all-sessions');
-    const data  = await res.json();
+    const res  = await fetch(apiUrl() + '/all-sessions');
+    const data = await res.json();
     const tbody = document.getElementById('sessions-tbody');
     tbody.innerHTML = '';
 
     if (!data.length) {
       tbody.innerHTML =
         '<tr><td colspan="6" class="empty-state">No active sessions</td></tr>';
-      return;
+    } else {
+      let totalEvents = 0, totalScore = 0, flagged = 0;
+      data.forEach(s => {
+        totalEvents += s.eventCount;
+        totalScore  += s.cheatScore;
+        if (s.cheatScore >= CHEAT_THRESHOLD) flagged++;
+        const scoreClass = s.cheatScore >= 20 ? 'high' : s.cheatScore >= 10 ? 'medium' : 'low';
+        tbody.innerHTML += `
+          <tr>
+            <td>${s.sessionId.slice(0, 8)}...</td>
+            <td>${s.studentId}</td>
+            <td>${s.examId}</td>
+            <td>${s.eventCount}</td>
+            <td><span class="score-chip ${scoreClass}">${s.cheatScore}</span></td>
+            <td><span class="status-badge running">&nbsp;LIVE</span></td>
+          </tr>`;
+      });
+      document.getElementById('admin-total-sessions').textContent = data.length;
+      document.getElementById('admin-total-events').textContent   = totalEvents;
+      document.getElementById('admin-avg-score').textContent =
+        data.length ? Math.round(totalScore / data.length) : 0;
+      document.getElementById('admin-flagged').textContent = flagged;
     }
-
-    let totalEvents = 0, totalScore = 0, flagged = 0;
-
-    data.forEach(s => {
-      totalEvents += s.eventCount;
-      totalScore  += s.cheatScore;
-      if (s.cheatScore >= 10) flagged++;
-      const scoreClass = s.cheatScore >= 20 ? 'high' : s.cheatScore >= 10 ? 'medium' : 'low';
-      tbody.innerHTML += `
-        <tr>
-          <td>${s.sessionId.slice(0, 8)}...</td>
-          <td>${s.studentId}</td>
-          <td>${s.examId}</td>
-          <td>${s.eventCount}</td>
-          <td><span class="score-chip ${scoreClass}">${s.cheatScore}</span></td>
-          <td><span class="status-badge running">&nbsp;LIVE</span></td>
-        </tr>`;
-    });
-
-    document.getElementById('admin-total-sessions').textContent = data.length;
-    document.getElementById('admin-total-events').textContent   = totalEvents;
-    document.getElementById('admin-avg-score').textContent =
-      data.length ? Math.round(totalScore / data.length) : 0;
-    document.getElementById('admin-flagged').textContent = flagged;
-
   } catch (_) {
-    // Show locally stored records if backend offline
+    // Show finalized records from localStorage
     const records = JSON.parse(localStorage.getItem('examchain_records') || '[]');
     const tbody   = document.getElementById('sessions-tbody');
 
@@ -498,12 +544,12 @@ async function refreshAdmin() {
     });
 
     document.getElementById('admin-total-sessions').textContent = records.length;
-    document.getElementById('admin-total-events').textContent   =
+    document.getElementById('admin-total-events').textContent =
       records.reduce((a, r) => a + r.eventCount, 0);
-    document.getElementById('admin-avg-score').textContent      =
+    document.getElementById('admin-avg-score').textContent =
       Math.round(records.reduce((a, r) => a + r.cheatScore, 0) / records.length);
-    document.getElementById('admin-flagged').textContent        =
-      records.filter(r => r.cheatScore >= 10).length;
+    document.getElementById('admin-flagged').textContent =
+      records.filter(r => r.cheated).length;
   }
 }
 
@@ -565,7 +611,7 @@ function selectOption(el, letter) {
   el.classList.add('selected');
 }
 
-// ─── Backend health check ─────────────────────────────────────────────────────
+// ─── Backend + IPFS health check ─────────────────────────────────────────────
 async function checkApiHealth() {
   const el = document.getElementById('api-status');
   try {
@@ -573,9 +619,12 @@ async function checkApiHealth() {
     const d   = await res.json();
     el.textContent = '● Connected (' + d.sessions + ' sessions)';
     el.style.color = 'var(--accent)';
+    checkIpfsStatus();
   } catch (_) {
-    el.textContent = '○ Backend offline (local mode)';
-    el.style.color = 'var(--muted)';
+    el.textContent = '○ Backend offline';
+    el.style.color = 'var(--danger)';
+    document.getElementById('ipfs-status-label').textContent = '○ IPFS: Backend needed';
+    document.getElementById('ipfs-status-label').style.color = 'var(--muted)';
   }
 }
 

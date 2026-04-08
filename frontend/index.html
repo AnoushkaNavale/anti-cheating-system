@@ -4,21 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ExamChain — Tamper-Proof Exam Logger</title>
-
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-  <!-- All styles live in style.css -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="app-grid">
 
-  <!-- ═══════════════════════════════════
-       HEADER
-  ════════════════════════════════════ -->
+  <!-- ═══ HEADER ═══ -->
   <header>
     <div class="logo">
       <div class="logo-icon">⬡</div>
@@ -32,7 +26,6 @@
       <button class="nav-btn"        onclick="showPage('setup')">SETUP</button>
     </nav>
 
-    <!-- Blockchain status indicator (no wallet needed) -->
     <div class="chain-status">
       <div class="chain-dot" id="chain-dot"></div>
       <span id="chain-label" style="font-family:var(--mono);font-size:11px;color:var(--muted)">
@@ -41,12 +34,9 @@
     </div>
   </header>
 
-  <!-- ═══════════════════════════════════
-       LEFT SIDEBAR
-  ════════════════════════════════════ -->
+  <!-- ═══ LEFT SIDEBAR ═══ -->
   <aside class="sidebar-left">
 
-    <!-- Session Config -->
     <div class="sidebar-section">
       <div class="sidebar-label">Session Config</div>
       <div class="form-group">
@@ -63,7 +53,6 @@
 
     <div class="divider"></div>
 
-    <!-- Session Status -->
     <div class="sidebar-section">
       <div class="sidebar-label">Session Status</div>
       <div style="margin-bottom:12px;">
@@ -91,7 +80,6 @@
 
     <div class="divider"></div>
 
-    <!-- Backend URL -->
     <div class="sidebar-section">
       <div class="sidebar-label">Backend</div>
       <div class="form-group">
@@ -99,19 +87,17 @@
         <input class="form-input" id="api-url" value="http://localhost:3001"/>
       </div>
       <div class="config-note" id="api-status">● Checking connection...</div>
+      <div class="config-note" id="ipfs-status-label" style="margin-top:6px;">● IPFS: Checking...</div>
     </div>
 
   </aside>
 
-  <!-- ═══════════════════════════════════
-       MAIN CONTENT
-  ════════════════════════════════════ -->
+  <!-- ═══ MAIN CONTENT ═══ -->
   <main class="main-content">
 
     <!-- ── EXAM PAGE ── -->
     <section class="page active" id="page-exam">
 
-      <!-- Exam header bar -->
       <div class="exam-header">
         <div>
           <div class="exam-title">COMPUTER SCIENCE 101 — FINAL EXAMINATION</div>
@@ -122,12 +108,10 @@
         <div class="timer-display" id="exam-timer">00:00:00</div>
       </div>
 
-      <!-- Time progress bar -->
       <div class="progress-bar-wrap">
         <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
       </div>
 
-      <!-- Exam questions -->
       <div class="exam-body">
         <div class="exam-instructions">
           ⚠ INTEGRITY NOTICE: This exam is monitored. Tab switching, copy/paste, and extended
@@ -174,7 +158,6 @@
         </div>
       </div>
 
-      <!-- Live event log feed -->
       <div class="log-feed">
         <div class="log-feed-header">
           <span>⬡ LIVE EVENT LOG</span>
@@ -190,20 +173,17 @@
 
       <div class="blockchain-card">
         <div class="bc-title">⬡ INTEGRITY VERIFICATION MODULE</div>
-
         <div class="form-group">
           <label class="form-label">IPFS CID</label>
-          <input class="form-input" id="verify-cid" placeholder="Qm... or bafybeig..." style="width:100%"/>
+          <input class="form-input" id="verify-cid" placeholder="Qm... (from IPFS Desktop)" style="width:100%"/>
         </div>
         <div class="form-group">
           <label class="form-label">ORIGINAL SHA-256 HASH</label>
           <input class="form-input" id="verify-hash" placeholder="64-character hex hash" style="width:100%"/>
         </div>
-
         <button class="btn-secondary" onclick="verifyIntegrity()" style="margin-top:0">
           🔍 VERIFY INTEGRITY
         </button>
-
         <div id="verify-result" class="verify-result pending" style="margin-top:16px;">
           <div class="verify-icon">🔒</div>
           <div class="verify-status">AWAITING VERIFICATION</div>
@@ -213,7 +193,6 @@
         </div>
       </div>
 
-      <!-- Blockchain record lookup -->
       <div class="blockchain-card">
         <div class="bc-title">⬡ BLOCKCHAIN RECORD LOOKUP</div>
         <div class="form-group">
@@ -231,11 +210,10 @@
     <!-- ── ADMIN PAGE ── -->
     <section class="page" id="page-admin">
 
-      <!-- Summary stats -->
       <div class="admin-grid">
         <div class="admin-card">
           <div class="admin-card-value" id="admin-total-sessions">0</div>
-          <div class="admin-card-label">Active Sessions</div>
+          <div class="admin-card-label">Sessions</div>
         </div>
         <div class="admin-card">
           <div class="admin-card-value" id="admin-total-events">0</div>
@@ -243,49 +221,39 @@
         </div>
         <div class="admin-card">
           <div class="admin-card-value" style="color:var(--warn)" id="admin-avg-score">0</div>
-          <div class="admin-card-label">Avg Risk Score</div>
+          <div class="admin-card-label">Avg Score</div>
         </div>
         <div class="admin-card">
           <div class="admin-card-value" style="color:var(--danger)" id="admin-flagged">0</div>
-          <div class="admin-card-label">Flagged Students</div>
+          <div class="admin-card-label">Flagged</div>
         </div>
       </div>
 
-      <!-- Live sessions table -->
       <div class="blockchain-card">
         <div class="bc-title" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>⬡ ACTIVE SESSIONS</span>
+          <span>⬡ SESSIONS</span>
           <button class="nav-btn" onclick="refreshAdmin()">↻ REFRESH</button>
         </div>
-        <table class="student-table" id="sessions-table">
+        <table class="student-table">
           <thead>
             <tr>
-              <th>Session ID</th>
-              <th>Student</th>
-              <th>Exam</th>
-              <th>Events</th>
-              <th>Risk Score</th>
-              <th>Status</th>
+              <th>Session ID</th><th>Student</th><th>Exam</th>
+              <th>Events</th><th>Risk Score</th><th>Status</th>
             </tr>
           </thead>
           <tbody id="sessions-tbody">
-            <tr>
-              <td colspan="6" class="empty-state">No active sessions. Start an exam to see data here.</td>
-            </tr>
+            <tr><td colspan="6" class="empty-state">No sessions yet.</td></tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Scoring legend -->
       <div class="blockchain-card">
         <div class="bc-title">⬡ SCORING LEGEND</div>
         <table class="student-table">
-          <thead>
-            <tr><th>Event Type</th><th>Points</th><th>Severity</th></tr>
-          </thead>
+          <thead><tr><th>Event</th><th>Points</th><th>Severity</th></tr></thead>
           <tbody>
             <tr><td>Tab Switch</td> <td>+2</td><td><span class="score-chip medium">MEDIUM</span></td></tr>
-            <tr><td>Copy / Paste</td><td>+5</td><td><span class="score-chip high">HIGH</span></td></tr>
+            <tr><td>Copy/Paste</td> <td>+5</td><td><span class="score-chip high">HIGH</span></td></tr>
             <tr><td>Cut</td>        <td>+4</td><td><span class="score-chip high">HIGH</span></td></tr>
             <tr><td>Idle (30s)</td> <td>+3</td><td><span class="score-chip medium">MEDIUM</span></td></tr>
             <tr><td>Right Click</td><td>+1</td><td><span class="score-chip low">LOW</span></td></tr>
@@ -298,7 +266,6 @@
     <!-- ── SETUP PAGE ── -->
     <section class="page" id="page-setup">
 
-      <!-- Contract address input -->
       <div class="blockchain-card">
         <div class="bc-title">⬡ CONTRACT CONFIGURATION</div>
         <div class="form-group">
@@ -307,69 +274,56 @@
                  oninput="saveConfig()"/>
         </div>
         <div class="config-note">
-          Deploy ExamLogger.sol via Remix IDE, then paste the contract address above.<br>
-          The system stores exam logs on IPFS and records proof on the blockchain automatically.
+          Deploy ExamLogger.sol via Remix IDE → paste the contract address above.
         </div>
       </div>
 
-      <!-- How it works -->
       <div class="blockchain-card">
-        <div class="bc-title">⬡ HOW THE SYSTEM WORKS</div>
+        <div class="bc-title">⬡ IPFS DESKTOP SETUP</div>
         <div style="font-family:var(--mono);font-size:12px;line-height:2;color:var(--text);">
 
-          <div style="color:var(--accent);margin-bottom:8px;">STEP 1 — Start Exam</div>
-          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
-            Enter Student ID and Exam ID → click START EXAM<br>
-            All student actions are now being monitored in real time
+          <div style="color:var(--accent);margin-bottom:6px;">STEP 1 — Install IPFS Desktop</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:14px;">
+            Download from: github.com/ipfs/ipfs-desktop/releases<br>
+            Install and open the app. It runs in your system tray.
           </div>
 
-          <div style="color:var(--accent);margin-bottom:8px;">STEP 2 — Events Are Captured</div>
-          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
-            Tab switches, copy/paste, right clicks, and idle time<br>
-            are all logged and sent to the backend server
+          <div style="color:var(--accent);margin-bottom:6px;">STEP 2 — Enable API Access</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:14px;">
+            IPFS Desktop → Settings → scroll down → enable "API"<br>
+            API should be running on: http://127.0.0.1:5001<br>
+            Gateway runs on: http://127.0.0.1:8080
           </div>
 
-          <div style="color:var(--accent);margin-bottom:8px;">STEP 3 — Finalize & Store</div>
-          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
-            Click FINALIZE & STORE when exam ends<br>
-            Backend batches all events → generates SHA-256 hash<br>
-            Uploads JSON file to IPFS → receives CID
+          <div style="color:var(--accent);margin-bottom:6px;">STEP 3 — Start Backend Server</div>
+          <div style="color:var(--muted);margin-left:16px;margin-bottom:14px;">
+            cd anti-cheating-system/backend<br>
+            npm install<br>
+            npm start
           </div>
 
-          <div style="color:var(--accent);margin-bottom:8px;">STEP 4 — Blockchain Storage</div>
-          <div style="color:var(--muted);margin-left:16px;margin-bottom:16px;">
-            CID and hash are stored permanently on the blockchain<br>
-            via the ExamLogger smart contract<br>
-            This record can never be changed or deleted
-          </div>
-
-          <div style="color:var(--accent);margin-bottom:8px;">STEP 5 — Verify Integrity</div>
+          <div style="color:var(--accent);margin-bottom:6px;">STEP 4 — Check Status</div>
           <div style="color:var(--muted);margin-left:16px;">
-            Go to VERIFY tab → paste CID and hash<br>
-            System fetches file from IPFS → recomputes hash<br>
-            Compares with blockchain record → shows VALID or TAMPERED
+            Left sidebar should show:<br>
+            ● Connected (backend running)<br>
+            ● IPFS: Desktop Connected (IPFS running)
           </div>
         </div>
       </div>
 
-      <!-- ABI viewer -->
       <div class="blockchain-card">
-        <div class="bc-title">⬡ CONTRACT ABI (for reference)</div>
+        <div class="bc-title">⬡ CONTRACT ABI</div>
         <textarea id="abi-display" readonly style="
-          width:100%; height:200px;
-          background:var(--surface2); border:1px solid var(--border);
-          color:var(--muted); font-family:var(--mono); font-size:10px;
-          padding:12px; resize:vertical; outline:none; line-height:1.5;">
-        </textarea>
+          width:100%;height:180px;background:var(--surface2);border:1px solid var(--border);
+          color:var(--muted);font-family:var(--mono);font-size:10px;
+          padding:12px;resize:vertical;outline:none;line-height:1.5;"></textarea>
       </div>
 
     </section>
 
   </main>
 
-  <!-- ═══════════════════════════════════
-       RIGHT SIDEBAR — Risk Score Panel
-  ════════════════════════════════════ -->
+  <!-- ═══ RIGHT SIDEBAR ═══ -->
   <aside class="sidebar-right">
 
     <div class="sidebar-label">Risk Score</div>
@@ -391,34 +345,19 @@
     <div class="sidebar-label">Event Breakdown</div>
 
     <div class="event-type-bar">
-      <div class="etb-header">
-        <span class="etb-label">TAB SWITCH</span>
-        <span class="etb-count" id="bar-tab">0</span>
-      </div>
+      <div class="etb-header"><span class="etb-label">TAB SWITCH</span><span class="etb-count" id="bar-tab">0</span></div>
       <div class="etb-bar-bg"><div class="etb-bar-fill warn" id="fill-tab" style="width:0%"></div></div>
     </div>
-
     <div class="event-type-bar">
-      <div class="etb-header">
-        <span class="etb-label">COPY/PASTE</span>
-        <span class="etb-count" id="bar-copy">0</span>
-      </div>
+      <div class="etb-header"><span class="etb-label">COPY/PASTE</span><span class="etb-count" id="bar-copy">0</span></div>
       <div class="etb-bar-bg"><div class="etb-bar-fill danger" id="fill-copy" style="width:0%"></div></div>
     </div>
-
     <div class="event-type-bar">
-      <div class="etb-header">
-        <span class="etb-label">IDLE</span>
-        <span class="etb-count" id="bar-idle">0</span>
-      </div>
+      <div class="etb-header"><span class="etb-label">IDLE</span><span class="etb-count" id="bar-idle">0</span></div>
       <div class="etb-bar-bg"><div class="etb-bar-fill" id="fill-idle" style="width:0%"></div></div>
     </div>
-
     <div class="event-type-bar">
-      <div class="etb-header">
-        <span class="etb-label">RIGHT CLICK</span>
-        <span class="etb-count" id="bar-rc">0</span>
-      </div>
+      <div class="etb-header"><span class="etb-label">RIGHT CLICK</span><span class="etb-count" id="bar-rc">0</span></div>
       <div class="etb-bar-bg"><div class="etb-bar-fill info" id="fill-rc" style="width:0%"></div></div>
     </div>
 
@@ -426,26 +365,63 @@
     <div class="sidebar-label">Last Chain TX</div>
     <div id="last-tx-display" style="font-family:var(--mono);font-size:10px;color:var(--muted);
       padding:10px;background:var(--surface2);border:1px solid var(--border);
-      word-break:break-all;line-height:1.6;">
-      No transaction yet
-    </div>
+      word-break:break-all;line-height:1.6;">No transaction yet</div>
 
     <div class="divider"></div>
     <div class="sidebar-label">IPFS CID</div>
     <div id="last-cid-display" style="font-family:var(--mono);font-size:10px;color:var(--muted);
       padding:10px;background:var(--surface2);border:1px solid var(--border);
-      word-break:break-all;line-height:1.6;">
-      No CID yet
-    </div>
+      word-break:break-all;line-height:1.6;">No CID yet</div>
 
   </aside>
 
 </div><!-- /.app-grid -->
 
-<!-- Alert overlay (toasts) -->
+<!-- ═══ ALERT TOASTS ═══ -->
 <div class="alert-overlay" id="alert-overlay"></div>
 
-<!-- Contract ABI data — read by app.js at startup -->
+<!-- ═══ RESULTS POPUP ═══ -->
+<div class="results-overlay" id="results-overlay" style="display:none;" onclick="handleOverlayClick(event)">
+  <div class="results-box" id="results-box">
+
+    <div class="results-icon" id="results-icon">✅</div>
+    <div class="results-verdict" id="results-verdict">STUDENT HAS NOT CHEATED</div>
+    <div class="results-sub"    id="results-sub">Exam completed with integrity.</div>
+
+    <div class="results-details">
+      <div class="results-row">
+        <span class="results-label">Risk Score</span>
+        <span class="results-value" id="results-score">0</span>
+      </div>
+      <div class="results-row">
+        <span class="results-label">Total Events</span>
+        <span class="results-value" id="results-events">0</span>
+      </div>
+      <div class="results-row">
+        <span class="results-label">IPFS Source</span>
+        <span class="results-value" id="results-source">—</span>
+      </div>
+      <div class="results-row">
+        <span class="results-label">CID</span>
+        <span class="results-value cid-wrap" id="results-cid">—</span>
+      </div>
+      <div class="results-row">
+        <span class="results-label">SHA-256</span>
+        <span class="results-value cid-wrap" id="results-hash">—</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:24px;">
+      <button class="results-btn-close" onclick="closeResultsPopup()">CLOSE</button>
+      <button class="results-btn-verify" onclick="closeResultsPopup(); showPage({target: document.querySelector('.nav-btn:nth-child(2)')}, 'verify')">
+        GO TO VERIFY
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Contract ABI data -->
 <script id="contract-abi-data" type="application/json">
 [
   {"inputs":[],"name":"getAllBatchIds","outputs":[{"internalType":"string[]","name":"","type":"string[]"}],"stateMutability":"view","type":"function"},
@@ -482,8 +458,21 @@
 ]
 </script>
 
-<!-- All JavaScript logic lives in app.js -->
 <script src="app.js"></script>
+
+<!-- Fix for GO TO VERIFY button -->
+<script>
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('results-overlay')) closeResultsPopup();
+}
+function goToVerify() {
+  closeResultsPopup();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-verify').classList.add('active');
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+}
+</script>
 
 </body>
 </html>

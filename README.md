@@ -1,214 +1,214 @@
 # ExamChain — Tamper-Proof Exam Attempt Logger
 
-A decentralized application (dApp) that captures student behavior during online exams,
-stores logs on IPFS, and records proof-of-integrity hashes on the Ethereum blockchain via Ganache.
+A decentralized application (dApp) that captures student behavior during online exams and stores logs in a tamper-proof manner using blockchain and IPFS. No MetaMask or wallet connection required to run the application.
 
 ---
 
-##  Project Structure
+## Project Structure
 
 ```
-exam-logger/
-├── contracts/
-│   └── ExamLogger.sol          # Solidity smart contract
-├── backend/
-│   ├── server.js               # Express API
-│   ├── package.json
-│   └── .env.example
+anti-cheating-system/
 ├── frontend/
-│   └── index.html              # Full frontend (single file)
+│   ├── index.html        # Main UI — all pages and structure
+│   ├── style.css         # All styling and design system
+│   └── app.js            # All JavaScript logic
+├── backend/
+│   ├── server.js         # Express API server
+│   ├── package.json      # Node.js dependencies
+│   └── .env.example      # Environment variables template
+├── contracts/
+│   └── ExamLogger.sol    # Solidity smart contract
 └── README.md
 ```
 
 ---
 
-##  Prerequisites
+## Tech Stack
 
-| Tool | Version | Download |
+| Layer | Technology |
+|-------|-----------|
+| Smart Contract | Solidity 0.8.19 |
+| Blockchain (local) | Remix VM (Osaka) via Remix IDE |
+| Backend | Node.js + Express |
+| Frontend | HTML, CSS, Vanilla JavaScript |
+| Storage | IPFS via Pinata |
+| Record Keeping | localStorage (browser) |
+
+> MetaMask and Ganache are NOT required to run this application.
+
+---
+
+## Features
+
+- Real-time student behavior monitoring during exams
+- Tracks tab switching, copy/paste, cut, right-click, and idle time
+- Live event feed with timestamps
+- Risk score calculation per student session
+- Batch event logs, hash with SHA-256, upload to IPFS
+- Store proof on blockchain via smart contract
+- Verify data integrity — detect tampering
+- Admin dashboard with session overview and cheating scores
+- Works fully offline in demo/local mode if backend is unavailable
+
+---
+
+## Prerequisites
+
+| Tool | Purpose | Download |
 |------|---------|----------|
-| Node.js | ≥ 18 | https://nodejs.org |
-| Ganache | Latest | https://trufflesuite.com/ganache |
-| MetaMask | Latest | Browser extension |
-| Remix IDE | Web | https://remix.ethereum.org |
-| Pinata Account | Free | https://app.pinata.cloud |
+| Node.js (v18+) | Run backend server | https://nodejs.org |
+| Remix IDE | Deploy smart contract | https://remix.ethereum.org |
+| VS Code | Code editor | https://code.visualstudio.com |
+| Pinata Account (optional) | IPFS uploads | https://app.pinata.cloud |
 
 ---
 
-##  Quick Start
+## Quick Start
 
-### Step 1 — Launch Ganache
+### Step 1 — Deploy the Smart Contract
 
-1. Open Ganache → click **Quickstart (Ethereum)**
-2. Note down the **RPC Server**: `http://127.0.0.1:7545`
-3. Note down **Network ID**: `1337`
-4. Copy any account's **private key** (click the key icon)
+1. Go to **https://remix.ethereum.org** in your browser
+2. Create a new file called `ExamLogger.sol`
+3. Paste the contents of `contracts/ExamLogger.sol`
+4. Go to the **Solidity Compiler** tab → set version to `0.8.19` → click **Compile ExamLogger.sol**
+5. Go to the **Deploy & Run Transactions** tab
+6. Set Environment to **Remix VM (Osaka)**
+7. Click the orange **Deploy** button
+8. Under **Deployed Contracts** at the bottom, copy the contract address
 
----
-
-### Step 2 — Configure MetaMask
-
-1. Open MetaMask → Settings → Networks → **Add Network Manually**
-
+Example contract address:
 ```
-Network Name:  Ganache Local
-RPC URL:       http://127.0.0.1:7545
-Chain ID:      1337
-Currency:      ETH
+0xf8e81D47203A594245E36C48e151709F0C19fBe8
 ```
 
-2. Import account: MetaMask → Import Account → Paste Ganache private key
-3. You should see ~100 ETH test balance
-
 ---
 
-### Step 3 — Deploy Smart Contract via Remix IDE
-
-1. Open https://remix.ethereum.org
-2. Create new file: `ExamLogger.sol`
-3. Paste the entire contents of `contracts/ExamLogger.sol`
-4. Go to **Solidity Compiler** tab:
-   - Compiler: `0.8.19`
-   - Click **Compile ExamLogger.sol**
-5. Go to **Deploy & Run Transactions** tab:
-   - Environment: **Injected Provider - MetaMask**
-   - MetaMask will prompt to connect → **Confirm**
-   - Ensure you're on Ganache Local network
-   - Click **Deploy** → Confirm MetaMask transaction
-6. Copy the **deployed contract address** (shown in Remix under "Deployed Contracts")
-
----
-
-### Step 4 — Configure Backend
+### Step 2 — Configure Environment (Optional — for real IPFS uploads)
 
 ```bash
-cd backend/
-
-# Install dependencies
-npm install
-
-# Create environment file
+cd backend
 cp .env.example .env
 ```
 
-Edit `.env`:
-```env
-PORT=3001
-PINATA_API_KEY=your_actual_key
-PINATA_SECRET_KEY=your_actual_secret
-IPFS_PROVIDER=pinata
+Edit `.env` and add your Pinata API keys:
+```
+PINATA_API_KEY=your_key_here
+PINATA_SECRET_KEY=your_secret_here
 ```
 
-**Getting Pinata Keys:**
-1. Go to https://app.pinata.cloud → Sign up (free)
-2. API Keys → New Key → Admin → Create Key
-3. Copy API Key and Secret
+> If you skip this step, the app runs in demo mode with mock IPFS CIDs. Everything else works normally.
+
+---
+
+### Step 3 — Start the Backend Server
+
+Open VS Code terminal and run:
 
 ```bash
-# Start backend
+cd anti-cheating-system/backend
+npm install
 npm start
-# → Server running at http://localhost:3001
 ```
 
----
-
-### Step 5 — Open Frontend
-
-Simply open `frontend/index.html` in your browser (double-click or use a local server):
-
-```bash
-# Option A: Direct open
-open frontend/index.html
-
-# Option B: Simple HTTP server
-cd frontend && npx serve .
-# → http://localhost:3000
+You should see:
+```
+ Exam Logger Backend running on http://localhost:3001
+   Health: http://localhost:3001/health
 ```
 
----
-
-### Step 6 — Complete Setup in UI
-
-1. Go to **SETUP** tab in the app
-2. Paste your deployed contract address
-3. Set API URL to `http://localhost:3001`
-4. Click **CONNECT WALLET** (top right) → approve MetaMask
+Keep this terminal running. Do not close it.
 
 ---
 
-##  Test Flow
+### Step 4 — Open the Frontend
 
-### Basic Exam Test
+Open **File Explorer** on your computer → navigate to:
+```
+anti-cheating-system/frontend/
+```
 
-1. **Start Session**
-   - Set Student ID: `STU-001`
-   - Set Exam ID: `EXAM-CS101`
-   - Click **▶ START EXAM**
+Double-click **index.html** to open it in your browser.
 
-2. **Trigger Events**
-   - Switch browser tabs → comes back → tab_switch logged
-   - Press Ctrl+C → copy event logged
-   - Right-click on page → right_click logged
-   - Wait 30 seconds idle → idle event logged
-   - Watch the live event feed update in real-time
-
-3. **Finalize**
-   - Click **⬡ FINALIZE & STORE**
-   - Backend batches events → uploads to IPFS → returns CID
-   - MetaMask popup → **Confirm** transaction
-   - CID and TX hash displayed
-
-4. **Verify Integrity**
-   - Go to **VERIFY** tab (auto-filled)
-   - Click ** VERIFY INTEGRITY**
-   - Should show  VALID
-   - To test tamper detection: change 1 character in the hash → shows 🚨 TAMPERED
-
-5. **Admin Dashboard**
-   - Go to **ADMIN** tab
-   - See all active sessions, event counts, risk scores
+> The app works directly from the file system. No Live Server needed since MetaMask is not required.
 
 ---
 
-##  API Reference
+### Step 5 — Configure the App
+
+1. Click the **SETUP** tab in the app
+2. Paste your contract address in the **CONTRACT ADDRESS** field
+3. Verify the API URL shows `http://localhost:3001`
+4. Check the bottom-left sidebar — it should show **● Connected**
+
+---
+
+### Step 6 — Run an Exam
+
+1. Click the **EXAM** tab
+2. Enter Student ID (e.g. `STU-001`) and Exam ID (e.g. `EXAM-CS101`)
+3. Click **▶ START EXAM**
+4. Trigger events to test monitoring:
+   - Switch to another browser tab and return → **Tab Switch logged**
+   - Press `Ctrl+C` → **Copy logged**
+   - Right-click on the page → **Right Click logged**
+   - Wait 30 seconds without moving → **Idle logged**
+5. Watch the live event feed update in real time
+6. Click **⬡ FINALIZE & STORE** when done
+
+---
+
+### Step 7 — Verify Integrity
+
+1. Click the **VERIFY** tab (it auto-fills after finalize)
+2. Click ** VERIFY INTEGRITY**
+3. Result shows ** VALID** if data is untampered
+4. If hash is modified manually, it shows ** TAMPERED**
+
+---
+
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Health check |
-| POST | `/start-session` | Create exam session |
-| POST | `/log-event` | Log single event |
-| GET | `/session-events/:id` | Get session events |
+| GET | `/health` | Server health check |
+| POST | `/start-session` | Create a new exam session |
+| POST | `/log-event` | Log a single student event |
+| GET | `/session-events/:id` | Get all events for a session |
 | POST | `/finalize-log` | Batch, hash, upload to IPFS |
 | POST | `/verify` | Verify CID integrity |
-| GET | `/all-sessions` | Admin: list sessions |
+| GET | `/all-sessions` | List all active sessions |
 
-### POST /log-event
+### Example — POST /log-event
+
+Request body:
 ```json
 {
-  "sessionId": "uuid",
+  "sessionId": "uuid-here",
   "studentId": "STU-001",
   "examId": "EXAM-CS101",
   "eventType": "tab_switch",
-  "timestamp": "2024-01-01T10:00:00.000Z",
+  "timestamp": "2026-04-06T10:00:00.000Z",
   "metadata": { "detail": "Student switched tabs" }
 }
 ```
 
-### POST /finalize-log → Response
+### Example — POST /finalize-log Response
+
 ```json
 {
   "success": true,
   "batchId": "uuid",
   "cid": "QmXxx...",
   "sha256Hash": "abc123...",
-  "eventCount": 12,
-  "cheatScore": 17,
+  "eventCount": 15,
+  "cheatScore": 23,
   "ipfsUrl": "https://gateway.pinata.cloud/ipfs/QmXxx..."
 }
 ```
 
 ---
 
-##  Smart Contract Functions
+## Smart Contract Functions
 
 ```solidity
 // Store a log batch CID on-chain
@@ -222,86 +222,145 @@ function storeLog(
     uint256 cheatScore
 ) public
 
-// Retrieve a stored log
+// Retrieve a stored log by batch ID
 function getLog(string memory batchId) public view returns (...)
 
 // Get all batch IDs for a student
 function getStudentBatches(string memory studentId) public view returns (string[] memory)
+
+// Get total number of stored batches
+function getTotalBatches() public view returns (uint256)
 ```
 
 ---
 
-##  Cheating Score System
+## Cheating Score System
 
-| Event | Points | Severity |
-|-------|--------|----------|
-| Tab switch | +2 | Medium |
-| Copy/Paste | +5 | High |
+| Event Type | Points | Severity |
+|-----------|--------|----------|
+| Tab Switch | +2 | Medium |
+| Copy | +5 | High |
+| Paste | +5 | High |
 | Cut | +4 | High |
 | Idle (30s) | +3 | Medium |
-| Right click | +1 | Low |
+| Right Click | +1 | Low |
 
-**Thresholds:**
-- 0–9: 🟢 Low Risk
-- 10–19: 🟡 Medium Risk
-- 20+: 🔴 High Risk (Flagged)
+**Risk Levels:**
+- 0 to 9 → 🟢 Low Risk
+- 10 to 19 → 🟡 Medium Risk
+- 20+ → 🔴 High Risk (Flagged)
 
 ---
 
-##  Architecture
+## How Tamper Detection Works
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   STUDENT BROWSER                    │
-│  ┌──────────────────────────────────────────────┐   │
-│  │  index.html                                  │   │
-│  │  • Exam UI + Event Capture                   │   │
-│  │  • Ethers.js → MetaMask                      │   │
-│  └──────────────┬───────────────────────────────┘   │
-└─────────────────│───────────────────────────────────┘
-                  │ POST /log-event
-                  │ POST /finalize-log
-                  ▼
-┌─────────────────────────────────────────────────────┐
-│                  NODE.JS BACKEND                     │
-│  • Collects events in memory                        │
-│  • Batches → JSON file                              │
-│  • SHA-256 hash                                     │
-│  • Upload to IPFS (Pinata)                          │
-│  • Returns CID + Hash                               │
-└─────────────────┬───────────────────────────────────┘
-                  │
-          ┌───────┴───────┐
-          ▼               ▼
-┌─────────────────┐  ┌──────────────────┐
-│   IPFS/Pinata   │  │  Ethers.js call  │
-│  Stores JSON    │  │  storeLog(cid)   │
-│  Returns CID    │  └────────┬─────────┘
-└─────────────────┘           │ MetaMask signs
-                              ▼
-                    ┌──────────────────┐
-                    │   GANACHE/EVM    │
-                    │ ExamLogger.sol   │
-                    │ stores: CID,     │
-                    │ hash, timestamp  │
-                    └──────────────────┘
+Student exam ends
+        ↓
+Events batched into JSON file
+        ↓
+SHA-256 hash computed → stored as fingerprint
+        ↓
+JSON file uploaded to IPFS → CID received
+        ↓
+CID + hash stored in blockchain record
+        ↓
+        ─────── Later, for verification ───────
+        ↓
+Fetch file from IPFS using CID
+        ↓
+Recompute SHA-256 hash of fetched file
+        ↓
+Compare with stored hash
+        ↓
+Match →  VALID       No match →  TAMPERED
 ```
 
 ---
 
-##  Troubleshooting
+## Offline / Demo Mode
 
-**MetaMask shows wrong network:**
-→ Switch to Ganache Local (Chain ID: 1337)
+If the backend server is not running or Pinata keys are not configured, the app automatically runs in demo mode:
 
-**"Contract not found":**
-→ Re-deploy to Ganache, paste new address in Setup tab
+- Events are stored locally in the browser
+- A mock IPFS CID is generated
+- Blockchain records are saved in browser localStorage
+- All features including verify and admin dashboard continue to work
+- The sidebar shows **○ Backend offline (local mode)**
 
-**IPFS upload fails:**
-→ Check Pinata API keys in `.env` — app runs in demo mode without them
+---
 
-**Backend CORS error:**
-→ Ensure backend is running on port 3001; check `api-url` in sidebar
+## Troubleshooting
 
-**Ganache restarted — contract gone:**
-→ Ganache resets on restart; redeploy the contract via Remix
+**Backend not starting:**
+```bash
+# Make sure you are in the correct folder
+cd anti-cheating-system/backend
+npm install
+npm start
+```
+
+**App shows "Backend offline":**
+- Check the backend terminal is still running
+- Check the API URL in the app matches `http://localhost:3001`
+- Try opening `http://localhost:3001/health` in the browser — it should return `{"status":"ok"}`
+
+**Contract address not saving:**
+- Paste the address in the SETUP tab and it saves automatically to browser localStorage
+- It will be remembered next time you open the app
+
+**Events not logging:**
+- Make sure you clicked **▶ START EXAM** first
+- The session status should show **● RECORDING** in green
+
+**IPFS upload failing:**
+- Check your Pinata API keys in the `.env` file
+- App automatically falls back to demo mode if keys are missing or invalid
+
+---
+
+## File Descriptions
+
+| File | Purpose |
+|------|---------|
+| `frontend/index.html` | Complete HTML structure — all 4 tabs (Exam, Verify, Admin, Setup) |
+| `frontend/style.css` | All CSS — design system, layout, components, animations |
+| `frontend/app.js` | All JavaScript — state, event monitoring, API calls, blockchain records |
+| `backend/server.js` | Express server — 7 API endpoints, IPFS upload, SHA-256 hashing |
+| `backend/package.json` | Node.js project config and dependencies |
+| `contracts/ExamLogger.sol` | Solidity smart contract — deployed via Remix IDE |
+
+---
+
+## Changes From Previous Version
+
+- Removed MetaMask wallet connection requirement completely
+- Removed Ethers.js library dependency
+- Removed Ganache local blockchain requirement
+- Replaced wallet status with a clean **BLOCKCHAIN READY** indicator
+- Blockchain records now stored in browser localStorage automatically
+- Admin dashboard now shows both live sessions and past finalized records
+- App works fully by opening index.html directly — no Live Server needed
+- All features remain functional including verify, admin, and event monitoring
+
+---
+
+## Contract Address Used in This Project
+
+```
+0xf8e81D47203A594245E36C48e151709F0C19fBe8
+```
+
+Deployed on Remix VM (Osaka) — local test environment.
+
+---
+
+## Future Enhancements
+
+- Deploy contract on Sepolia or Polygon testnet for public access
+- Add facial recognition for continuous student identity verification
+- Integrate with learning management systems like Moodle or Google Classroom
+- Add screen recording and screenshot capture
+- Machine learning based anomaly detection for cheating patterns
+- Teacher dashboard with downloadable tamper-proof PDF reports
+- Mobile app for invigilators to monitor exams in real time
