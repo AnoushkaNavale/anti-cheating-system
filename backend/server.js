@@ -306,7 +306,7 @@ app.get('/all-sessions', (req, res) => {
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🚀 Exam Logger Backend running on http://localhost:${PORT}`);
+  console.log(`\n Exam Logger Backend running on http://localhost:${PORT}`);
   console.log(`   Health:      http://localhost:${PORT}/health`);
   console.log(`   IPFS Status: http://localhost:${PORT}/ipfs-status`);
   console.log(`\n   IPFS: Make sure IPFS Desktop is running (port 5001)\n`);
