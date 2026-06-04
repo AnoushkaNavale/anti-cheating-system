@@ -17,6 +17,12 @@ const SCORING = {
 };
 
 // ─── Cheating threshold — score >= this = cheated ────────────────────────────
+const ANSWER_KEY = {
+  1: 'B',
+  2: 'C',
+  3: 'B',
+};
+
 const CHEAT_THRESHOLD = 10;
 
 // ─── Application state ────────────────────────────────────────────────────────
@@ -25,6 +31,7 @@ const state = {
   examRunning:  false,
   events:       [],
   score:        0,
+  answers:      {},
   eventCounts:  { tab_switch: 0, copy: 0, paste: 0, cut: 0, idle: 0, right_click: 0 },
   startTime:    null,
   timerInterval: null,
@@ -39,6 +46,21 @@ const state = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function apiUrl()          { return document.getElementById('api-url').value.trim(); }
 function contractAddress() { return document.getElementById('contract-address').value.trim(); }
+
+function calculateExamMarks() {
+  const total = Object.keys(ANSWER_KEY).length;
+  let obtained = 0;
+
+  for (const [questionNo, correctAnswer] of Object.entries(ANSWER_KEY)) {
+    if (state.answers[questionNo] === correctAnswer) obtained++;
+  }
+
+  return {
+    obtained,
+    total,
+    percentage: total ? Math.round((obtained / total) * 100) : 0,
+  };
+}
 
 // ─── Toast notification ───────────────────────────────────────────────────────
 function toast(msg, type = 'warn') {
@@ -130,6 +152,7 @@ async function startExam() {
   state.startTime    = Date.now();
   state.events       = [];
   state.score        = 0;
+  state.answers      = {};
   state.eventCounts  = { tab_switch: 0, copy: 0, paste: 0, cut: 0, idle: 0, right_click: 0 };
 
   document.getElementById('session-id-display').textContent = state.sessionId.slice(0, 8) + '...';
@@ -258,11 +281,17 @@ async function finalizeLog() {
     '<span class="spinner"></span>UPLOADING TO IPFS...';
 
   try {
+    const examMarks = calculateExamMarks();
+
     // Call backend, which uploads to Pinata IPFS.
     const res  = await fetch(apiUrl() + '/finalize-log', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ sessionId: state.sessionId }),
+      body:    JSON.stringify({
+        sessionId: state.sessionId,
+        answers: state.answers,
+        examMarks,
+      }),
     });
 
     if (!res.ok) {
@@ -290,13 +319,14 @@ async function finalizeLog() {
     document.getElementById('finalize-btn').innerHTML =
       '<span class="spinner"></span>STORING ON CHAIN...';
 
-    await storeOnBlockchain(data.batchId, data.cid, data.sha256Hash, data.cheatScore, data.txHash, data.contractAddress);
+    const submittedMarks = data.examMarks || examMarks;
+    await storeOnBlockchain(data.batchId, data.cid, data.sha256Hash, data.cheatScore, data.txHash, data.contractAddress, submittedMarks);
 
     toast('✓ Record stored on blockchain!');
 
     // Stop exam and show results popup
     stopExam();
-    showResultsPopup(data.cheatScore, data.cid, data.sha256Hash, data.source);
+    showResultsPopup(data.cheatScore, data.cid, data.sha256Hash, data.source, submittedMarks);
 
   } catch (e) {
     console.error('[Finalize]', e);
@@ -313,7 +343,7 @@ async function finalizeLog() {
 }
 
 // ─── Store record locally (represents blockchain storage) ─────────────────────
-async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore, txHash, chainContractAddress) {
+async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore, txHash, chainContractAddress, examMarks) {
   const studentId = document.getElementById('student-id').value;
   const examId    = document.getElementById('exam-id').value;
   const txId      = txHash || 'LOCAL-' + Date.now() + '-' + batchId.slice(0, 8);
@@ -327,6 +357,7 @@ async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore, txHash, c
     examId,
     eventCount:      state.events.length,
     cheatScore:      cheatScore || state.score,
+    examMarks,
     cheated:         (cheatScore || state.score) >= CHEAT_THRESHOLD,
     storedAt:        new Date().toISOString(),
     contractAddress: chainContractAddress || contractAddress() || 'Not configured',
@@ -346,7 +377,7 @@ async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore, txHash, c
 }
 
 // ─── Results Popup ────────────────────────────────────────────────────────────
-function showResultsPopup(cheatScore, cid, hash, ipfsSource) {
+function showResultsPopup(cheatScore, cid, hash, ipfsSource, examMarks) {
   const cheated  = cheatScore >= CHEAT_THRESHOLD;
   const overlay  = document.getElementById('results-overlay');
   const box      = document.getElementById('results-box');
@@ -373,6 +404,8 @@ function showResultsPopup(cheatScore, cid, hash, ipfsSource) {
 
   // Fill in details
   document.getElementById('results-score').textContent  = cheatScore;
+  document.getElementById('results-marks').textContent =
+    `${examMarks.obtained} / ${examMarks.total} (${examMarks.percentage}%)`;
   document.getElementById('results-events').textContent = state.events.length;
   document.getElementById('results-cid').textContent    = cid;
   document.getElementById('results-hash').textContent   = hash.slice(0, 32) + '...';
@@ -621,6 +654,11 @@ function selectOption(el, letter) {
   const parent = el.parentElement;
   parent.querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
+
+  const question = el.closest('.exam-question');
+  const allQuestions = Array.from(document.querySelectorAll('.exam-question'));
+  const questionNo = allQuestions.indexOf(question) + 1;
+  state.answers[questionNo] = letter;
 }
 
 // ─── Backend + IPFS health check ─────────────────────────────────────────────

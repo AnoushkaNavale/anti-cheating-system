@@ -180,7 +180,7 @@ app.get('/session-events/:sessionId', (req, res) => {
 });
 
 app.post('/finalize-log', async (req, res) => {
-  const { sessionId } = req.body;
+  const { sessionId, answers, examMarks } = req.body;
   if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
 
   const session = sessions[sessionId];
@@ -201,6 +201,8 @@ app.post('/finalize-log', async (req, res) => {
       finalizedAt,
       eventCount: session.events.length,
       cheatScore: score,
+      examMarks: examMarks || null,
+      answers: answers || {},
       events: session.events,
     };
 
@@ -223,6 +225,7 @@ app.post('/finalize-log', async (req, res) => {
       examId: session.examId,
       eventCount: logBatch.eventCount,
       cheatScore: score,
+      examMarks: logBatch.examMarks,
       filename,
       source,
       ipfsUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
