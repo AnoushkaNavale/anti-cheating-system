@@ -1,9 +1,12 @@
 {
   "name": "anti-cheating-system",
   "version": "1.0.0",
-  "description": "A decentralized application (dApp) that captures student behavior during online exams,\r stores logs on IPFS, and records proof-of-integrity hashes on the Ethereum blockchain via Ganache.",
+  "description": "A decentralized application (dApp) that captures student behavior during online exams, stores logs on IPFS, and records proof-of-integrity hashes on a local Ethereum blockchain.",
   "main": "index.js",
   "scripts": {
+    "chain": "hardhat node",
+    "compile": "hardhat compile",
+    "deploy:local": "hardhat run scripts/deploy.js --network local",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,5 +24,10 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.27.2"
   }
 }

@@ -175,7 +175,7 @@
         <div class="bc-title">⬡ INTEGRITY VERIFICATION MODULE</div>
         <div class="form-group">
           <label class="form-label">IPFS CID</label>
-          <input class="form-input" id="verify-cid" placeholder="Qm... (from IPFS Desktop)" style="width:100%"/>
+          <input class="form-input" id="verify-cid" placeholder="Qm... (from Pinata)" style="width:100%"/>
         </div>
         <div class="form-group">
           <label class="form-label">ORIGINAL SHA-256 HASH</label>
@@ -269,30 +269,30 @@
       <div class="blockchain-card">
         <div class="bc-title">⬡ CONTRACT CONFIGURATION</div>
         <div class="form-group">
-          <label class="form-label">CONTRACT ADDRESS (deployed via Remix IDE)</label>
+          <label class="form-label">CONTRACT ADDRESS (deployed with Hardhat)</label>
           <input class="form-input" id="contract-address" placeholder="0x..." style="width:100%"
                  oninput="saveConfig()"/>
         </div>
         <div class="config-note">
-          Deploy ExamLogger.sol via Remix IDE → paste the contract address above.
+          Run npm run deploy:local in VS Code, then paste the deployed contract address above.
         </div>
       </div>
 
       <div class="blockchain-card">
-        <div class="bc-title">⬡ IPFS DESKTOP SETUP</div>
+        <div class="bc-title">⬡ PINATA IPFS SETUP</div>
         <div style="font-family:var(--mono);font-size:12px;line-height:2;color:var(--text);">
 
-          <div style="color:var(--accent);margin-bottom:6px;">STEP 1 — Install IPFS Desktop</div>
+          <div style="color:var(--accent);margin-bottom:6px;">STEP 1 — Create Pinata API Keys</div>
           <div style="color:var(--muted);margin-left:16px;margin-bottom:14px;">
-            Download from: github.com/ipfs/ipfs-desktop/releases<br>
-            Install and open the app. It runs in your system tray.
+            Open app.pinata.cloud → API Keys → New Key.<br>
+            Copy the API key and secret key.
           </div>
 
-          <div style="color:var(--accent);margin-bottom:6px;">STEP 2 — Enable API Access</div>
+          <div style="color:var(--accent);margin-bottom:6px;">STEP 2 — Configure Backend .env</div>
           <div style="color:var(--muted);margin-left:16px;margin-bottom:14px;">
-            IPFS Desktop → Settings → scroll down → enable "API"<br>
-            API should be running on: http://127.0.0.1:5001<br>
-            Gateway runs on: http://127.0.0.1:8080
+            Create backend/.env from backend/.env.example.<br>
+            Set PINATA_API_KEY and PINATA_SECRET_KEY.<br>
+            No IPFS Desktop app is required.
           </div>
 
           <div style="color:var(--accent);margin-bottom:6px;">STEP 3 — Start Backend Server</div>
@@ -306,7 +306,7 @@
           <div style="color:var(--muted);margin-left:16px;">
             Left sidebar should show:<br>
             ● Connected (backend running)<br>
-            ● IPFS: Desktop Connected (IPFS running)
+            ● IPFS: Pinata Connected
           </div>
         </div>
       </div>
@@ -424,35 +424,23 @@
 <!-- Contract ABI data -->
 <script id="contract-abi-data" type="application/json">
 [
-  {"inputs":[],"name":"getAllBatchIds","outputs":[{"internalType":"string[]","name":"","type":"string[]"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
   {"inputs":[{"internalType":"string","name":"batchId","type":"string"}],"name":"getLog","outputs":[
-    {"internalType":"string","name":"cid","type":"string"},
-    {"internalType":"string","name":"sha256Hash","type":"string"},
-    {"internalType":"string","name":"studentId","type":"string"},
-    {"internalType":"string","name":"examId","type":"string"},
-    {"internalType":"uint256","name":"timestamp","type":"uint256"},
-    {"internalType":"address","name":"submitter","type":"address"},
-    {"internalType":"uint256","name":"eventCount","type":"uint256"},
-    {"internalType":"uint256","name":"cheatScore","type":"uint256"}
+    {"components":[
+      {"internalType":"string","name":"cid","type":"string"},
+      {"internalType":"uint256","name":"timestamp","type":"uint256"},
+      {"internalType":"uint256","name":"cheatScore","type":"uint256"}
+    ],"internalType":"struct ExamLogger.LogBatch","name":"","type":"tuple"}
   ],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"string","name":"studentId","type":"string"}],"name":"getStudentBatches","outputs":[{"internalType":"string[]","name":"","type":"string[]"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"getTotalBatches","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
   {"inputs":[
     {"internalType":"string","name":"batchId","type":"string"},
     {"internalType":"string","name":"cid","type":"string"},
-    {"internalType":"string","name":"sha256Hash","type":"string"},
-    {"internalType":"string","name":"studentId","type":"string"},
-    {"internalType":"string","name":"examId","type":"string"},
-    {"internalType":"uint256","name":"eventCount","type":"uint256"},
     {"internalType":"uint256","name":"cheatScore","type":"uint256"}
   ],"name":"storeLog","outputs":[],"stateMutability":"nonpayable","type":"function"},
   {"anonymous":false,"inputs":[
-    {"indexed":true,"internalType":"string","name":"batchId","type":"string"},
+    {"indexed":true,"internalType":"bytes32","name":"batchId","type":"bytes32"},
     {"indexed":false,"internalType":"string","name":"cid","type":"string"},
-    {"indexed":false,"internalType":"string","name":"studentId","type":"string"},
-    {"indexed":false,"internalType":"string","name":"examId","type":"string"},
-    {"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},
-    {"indexed":false,"internalType":"address","name":"submitter","type":"address"},
     {"indexed":false,"internalType":"uint256","name":"cheatScore","type":"uint256"}
   ],"name":"LogStored","type":"event"}
 ]

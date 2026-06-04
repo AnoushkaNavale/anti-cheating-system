@@ -27,14 +27,14 @@ anti-cheating-system/
 
 | Layer | Technology |
 |-------|-----------|
-| Smart Contract | Solidity 0.8.19 |
-| Blockchain (local) | Remix VM (Osaka) via Remix IDE |
+| Smart Contract | Solidity 0.8.19 + Hardhat |
+| Blockchain (local) | Hardhat local node |
 | Backend | Node.js + Express |
 | Frontend | HTML, CSS, Vanilla JavaScript |
 | Storage | IPFS via Pinata |
 | Record Keeping | localStorage (browser) |
 
-> MetaMask and Ganache are NOT required to run this application.
+> MetaMask, Ganache Desktop, and IPFS Desktop are NOT required to run this application.
 
 ---
 
@@ -57,7 +57,6 @@ anti-cheating-system/
 | Tool | Purpose | Download |
 |------|---------|----------|
 | Node.js (v18+) | Run backend server | https://nodejs.org |
-| Remix IDE | Deploy smart contract | https://remix.ethereum.org |
 | VS Code | Code editor | https://code.visualstudio.com |
 | Pinata Account (optional) | IPFS uploads | https://app.pinata.cloud |
 
@@ -65,25 +64,39 @@ anti-cheating-system/
 
 ## Quick Start
 
-### Step 1 — Deploy the Smart Contract
+### Step 1 — Start the Hardhat Local Blockchain
 
-1. Go to **https://remix.ethereum.org** in your browser
-2. Create a new file called `ExamLogger.sol`
-3. Paste the contents of `contracts/ExamLogger.sol`
-4. Go to the **Solidity Compiler** tab → set version to `0.8.19` → click **Compile ExamLogger.sol**
-5. Go to the **Deploy & Run Transactions** tab
-6. Set Environment to **Remix VM (Osaka)**
-7. Click the orange **Deploy** button
-8. Under **Deployed Contracts** at the bottom, copy the contract address
+Open a VS Code terminal in the project root and run:
 
-Example contract address:
+```bash
+npm install
+npm run chain
 ```
-0xf8e81D47203A594245E36C48e151709F0C19fBe8
+
+Keep this terminal open. Hardhat will print local test accounts and private keys.
+
+### Step 2 — Deploy the Smart Contract
+
+Open a second VS Code terminal in the project root.
+
+Create `.env` from `.env.example` and paste one Hardhat private key:
+
+```bash
+cp .env.example .env
 ```
+
+Then deploy:
+
+```bash
+npm run compile
+npm run deploy:local
+```
+
+Copy the deployed contract address printed in the terminal.
 
 ---
 
-### Step 2 — Configure Environment (Optional — for real IPFS uploads)
+### Step 3 — Configure Backend Environment
 
 ```bash
 cd backend
@@ -94,13 +107,16 @@ Edit `.env` and add your Pinata API keys:
 ```
 PINATA_API_KEY=your_key_here
 PINATA_SECRET_KEY=your_secret_here
+LOCAL_CHAIN_URL=http://127.0.0.1:8545
+CONTRACT_ADDRESS=your_deployed_contract_address
+PRIVATE_KEY=your_hardhat_private_key
 ```
 
-> If you skip this step, the app runs in demo mode with mock IPFS CIDs. Everything else works normally.
+> Pinata keys are required for real IPFS uploads. The blockchain fields let the backend store the CID on the Hardhat local chain.
 
 ---
 
-### Step 3 — Start the Backend Server
+### Step 4 — Start the Backend Server
 
 Open VS Code terminal and run:
 
@@ -120,7 +136,7 @@ Keep this terminal running. Do not close it.
 
 ---
 
-### Step 4 — Open the Frontend
+### Step 5 — Open the Frontend
 
 Open **File Explorer** on your computer → navigate to:
 ```
@@ -133,7 +149,7 @@ Double-click **index.html** to open it in your browser.
 
 ---
 
-### Step 5 — Configure the App
+### Step 6 — Configure the App
 
 1. Click the **SETUP** tab in the app
 2. Paste your contract address in the **CONTRACT ADDRESS** field
@@ -142,7 +158,7 @@ Double-click **index.html** to open it in your browser.
 
 ---
 
-### Step 6 — Run an Exam
+### Step 7 — Run an Exam
 
 1. Click the **EXAM** tab
 2. Enter Student ID (e.g. `STU-001`) and Exam ID (e.g. `EXAM-CS101`)
@@ -157,7 +173,7 @@ Double-click **index.html** to open it in your browser.
 
 ---
 
-### Step 7 — Verify Integrity
+### Step 8 — Verify Integrity
 
 1. Click the **VERIFY** tab (it auto-fills after finalize)
 2. Click ** VERIFY INTEGRITY**
@@ -328,7 +344,7 @@ npm start
 | `frontend/app.js` | All JavaScript — state, event monitoring, API calls, blockchain records |
 | `backend/server.js` | Express server — 7 API endpoints, IPFS upload, SHA-256 hashing |
 | `backend/package.json` | Node.js project config and dependencies |
-| `contracts/ExamLogger.sol` | Solidity smart contract — deployed via Remix IDE |
+| `contracts/ExamLogger.sol` | Solidity smart contract — compiled and deployed with Hardhat |
 
 ---
 
@@ -336,7 +352,7 @@ npm start
 
 - Removed MetaMask wallet connection requirement completely
 - Removed Ethers.js library dependency
-- Removed Ganache local blockchain requirement
+- Removed Ganache Desktop requirement; Hardhat local node can run from VS Code
 - Replaced wallet status with a clean **BLOCKCHAIN READY** indicator
 - Blockchain records now stored in browser localStorage automatically
 - Admin dashboard now shows both live sessions and past finalized records

@@ -33,7 +33,7 @@ const state = {
   lastCid:      null,
   lastHash:     null,
   lastBatchId:  null,
-  ipfsSource:   null,  // 'ipfs-desktop' | 'pinata'
+  ipfsSource:   null,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -60,12 +60,23 @@ function saveConfig() {
   localStorage.setItem('examchain_api',      document.getElementById('api-url').value);
 }
 
-function loadConfig() {
+async function loadConfig() {
   const c = localStorage.getItem('examchain_contract');
   const a = localStorage.getItem('examchain_api');
   if (c) document.getElementById('contract-address').value = c;
   if (a) document.getElementById('api-url').value = a;
   document.getElementById('abi-display').value = JSON.stringify(CONTRACT_ABI, null, 2);
+
+  try {
+    const res = await fetch(apiUrl() + '/config', { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    if (data.contractAddress) {
+      document.getElementById('contract-address').value = data.contractAddress;
+      saveConfig();
+    }
+  } catch (_) {
+    // The contract address is optional in the UI; backend storage uses backend/.env.
+  }
 }
 
 // ─── Page navigation ──────────────────────────────────────────────────────────
@@ -84,7 +95,7 @@ async function checkIpfsStatus() {
     const res  = await fetch(apiUrl() + '/ipfs-status', { signal: AbortSignal.timeout(4000) });
     const data = await res.json();
     if (data.available) {
-      el.textContent = '● IPFS: ' + (data.source === 'ipfs-desktop' ? 'Desktop Connected' : 'Pinata Connected');
+      el.textContent = '● IPFS: Pinata Connected';
       el.style.color = 'var(--accent)';
     } else {
       el.textContent = '○ IPFS: Not connected';
@@ -247,7 +258,7 @@ async function finalizeLog() {
     '<span class="spinner"></span>UPLOADING TO IPFS...';
 
   try {
-    // Call backend — which uploads to real IPFS Desktop or Pinata
+    // Call backend, which uploads to Pinata IPFS.
     const res  = await fetch(apiUrl() + '/finalize-log', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -279,7 +290,7 @@ async function finalizeLog() {
     document.getElementById('finalize-btn').innerHTML =
       '<span class="spinner"></span>STORING ON CHAIN...';
 
-    await storeOnBlockchain(data.batchId, data.cid, data.sha256Hash, data.cheatScore);
+    await storeOnBlockchain(data.batchId, data.cid, data.sha256Hash, data.cheatScore, data.txHash, data.contractAddress);
 
     toast('✓ Record stored on blockchain!');
 
@@ -293,7 +304,7 @@ async function finalizeLog() {
     // Show specific error — do NOT generate fake CID
     let msg = e.message || 'Unknown error';
     if (msg.includes('IPFS') || msg.includes('fetch')) {
-      msg = 'IPFS not reachable. Make sure IPFS Desktop is running and backend is started.';
+      msg = 'Pinata upload failed. Check backend/.env API keys and make sure the backend is started.';
     }
     toast('⚠ ' + msg, 'danger');
     document.getElementById('finalize-btn').innerHTML = '⬡ FINALIZE & STORE';
@@ -302,10 +313,10 @@ async function finalizeLog() {
 }
 
 // ─── Store record locally (represents blockchain storage) ─────────────────────
-async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore) {
+async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore, txHash, chainContractAddress) {
   const studentId = document.getElementById('student-id').value;
   const examId    = document.getElementById('exam-id').value;
-  const txId      = 'TX-' + Date.now() + '-' + batchId.slice(0, 8);
+  const txId      = txHash || 'LOCAL-' + Date.now() + '-' + batchId.slice(0, 8);
 
   const record = {
     txId,
@@ -318,8 +329,9 @@ async function storeOnBlockchain(batchId, cid, sha256Hash, cheatScore) {
     cheatScore:      cheatScore || state.score,
     cheated:         (cheatScore || state.score) >= CHEAT_THRESHOLD,
     storedAt:        new Date().toISOString(),
-    contractAddress: contractAddress() || 'Not configured',
+    contractAddress: chainContractAddress || contractAddress() || 'Not configured',
     ipfsSource:      state.ipfsSource,
+    storedOnChain:   Boolean(txHash),
   };
 
   const records = JSON.parse(localStorage.getItem('examchain_records') || '[]');
@@ -365,7 +377,7 @@ function showResultsPopup(cheatScore, cid, hash, ipfsSource) {
   document.getElementById('results-cid').textContent    = cid;
   document.getElementById('results-hash').textContent   = hash.slice(0, 32) + '...';
   document.getElementById('results-source').textContent =
-    ipfsSource === 'ipfs-desktop' ? 'IPFS Desktop (Local)' : 'Pinata (Cloud)';
+    'Pinata (Cloud)';
 
   // Show overlay
   overlay.style.display = 'flex';
