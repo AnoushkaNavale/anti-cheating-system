@@ -11,17 +11,28 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const EXAM_FEE_ETH = process.env.EXAM_FEE_ETH || '0.01';
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 const sessions = {};
+const registrations = {};
 
 const EXAM_LOGGER_ABI = [
-  'function storeLog(string batchId, string cid, uint256 cheatScore) public',
-  'function getLog(string batchId) public view returns (tuple(string cid, uint256 timestamp, uint256 cheatScore))',
+  'function storeLog(string batchId, string cid, string sha256Hash, string studentId, string examId, uint256 cheatScore, uint256 marksObtained, uint256 totalMarks) public',
+  'function getLog(string batchId) public view returns (tuple(string cid, string sha256Hash, string studentId, string examId, uint256 timestamp, uint256 cheatScore, uint256 marksObtained, uint256 totalMarks))',
 ];
+
+function localChainUrl() {
+  return process.env.GANACHE_URL || process.env.LOCAL_CHAIN_URL;
+}
+
+function ownerAddress() {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(process.env.PRIVATE_KEY || '')) return '';
+  return new ethers.Wallet(process.env.PRIVATE_KEY).address;
+}
 
 function sha256(data) {
   return crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
@@ -72,23 +83,34 @@ async function uploadToIPFS(jsonObject, filename) {
   return { cid, source: 'pinata' };
 }
 
-async function storeLogOnChain(batchId, cid, cheatScore) {
-  const rpcUrl = process.env.LOCAL_CHAIN_URL || process.env.GANACHE_URL;
+async function storeLogOnChain(batchId, cid, sha256Hash, studentId, examId, cheatScore, examMarks) {
+  const rpcUrl = localChainUrl();
   const privateKey = process.env.PRIVATE_KEY;
   const contractAddress = process.env.CONTRACT_ADDRESS;
 
-  if (!rpcUrl || !privateKey || !contractAddress) {
+  if (!rpcUrl || !/^0x[0-9a-fA-F]{64}$/.test(privateKey || '') || !contractAddress) {
     return {
       stored: false,
-      reason: 'Blockchain env not configured. Set LOCAL_CHAIN_URL, PRIVATE_KEY, and CONTRACT_ADDRESS.',
+      reason: 'Blockchain env not configured. Set GANACHE_URL, PRIVATE_KEY, and CONTRACT_ADDRESS.',
     };
   }
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, EXAM_LOGGER_ABI, wallet);
+  const marksObtained = examMarks?.obtained || 0;
+  const totalMarks = examMarks?.total || 0;
 
-  const tx = await contract.storeLog(batchId, cid, cheatScore);
+  const tx = await contract.storeLog(
+    batchId,
+    cid,
+    sha256Hash,
+    studentId,
+    examId,
+    cheatScore,
+    marksObtained,
+    totalMarks
+  );
   const receipt = await tx.wait();
 
   console.log(`[Blockchain] Stored batch ${batchId} in tx ${receipt.hash}`);
@@ -106,8 +128,72 @@ app.get('/health', (req, res) => {
 app.get('/config', (req, res) => {
   res.json({
     contractAddress: process.env.CONTRACT_ADDRESS || '',
-    localChainUrl: process.env.LOCAL_CHAIN_URL || process.env.GANACHE_URL || '',
+    localChainUrl: localChainUrl() || '',
+    ownerAddress: ownerAddress(),
+    examFeeEth: EXAM_FEE_ETH,
   });
+});
+
+app.get('/chain-accounts', async (req, res) => {
+  try {
+    const rpcUrl = localChainUrl();
+    if (!rpcUrl) return res.status(500).json({ error: 'GANACHE_URL is not configured' });
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const accounts = await provider.listAccounts();
+    const owner = ownerAddress().toLowerCase();
+
+    res.json({
+      ownerAddress: ownerAddress(),
+      examFeeEth: EXAM_FEE_ETH,
+      accounts: accounts
+        .map((account) => account.address)
+        .filter((address) => address.toLowerCase() !== owner),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not load local blockchain accounts', details: err.message });
+  }
+});
+
+app.post('/register-student', async (req, res) => {
+  const { studentId, examId, studentAddress } = req.body;
+  if (!studentId || !examId || !studentAddress) {
+    return res.status(400).json({ error: 'studentId, examId, and studentAddress are required' });
+  }
+
+  const key = `${studentId}:${examId}`;
+  if (registrations[key]) return res.json({ success: true, alreadyRegistered: true, registration: registrations[key] });
+
+  try {
+    const rpcUrl = localChainUrl();
+    if (!rpcUrl) return res.status(500).json({ error: 'GANACHE_URL is not configured' });
+
+    const owner = ownerAddress();
+    if (!owner) return res.status(500).json({ error: 'Owner private key is not configured' });
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const signer = await provider.getSigner(studentAddress);
+    const tx = await signer.sendTransaction({
+      to: owner,
+      value: ethers.parseEther(EXAM_FEE_ETH),
+    });
+    const receipt = await tx.wait();
+
+    const registration = {
+      studentId,
+      examId,
+      studentAddress,
+      ownerAddress: owner,
+      examFeeEth: EXAM_FEE_ETH,
+      txHash: receipt.hash,
+      registeredAt: new Date().toISOString(),
+    };
+
+    registrations[key] = registration;
+    res.json({ success: true, registration });
+  } catch (err) {
+    res.status(500).json({ error: 'Registration payment failed', details: err.message });
+  }
 });
 
 app.get('/ipfs-status', (req, res) => {
@@ -127,10 +213,16 @@ app.post('/start-session', (req, res) => {
     return res.status(400).json({ error: 'studentId and examId are required' });
   }
 
+  const registration = registrations[`${studentId}:${examId}`];
+  if (!registration) {
+    return res.status(403).json({ error: 'Student must register and pay before starting the exam' });
+  }
+
   const sessionId = uuidv4();
   sessions[sessionId] = {
     studentId,
     examId,
+    registration,
     events: [],
     createdAt: new Date().toISOString(),
   };
@@ -211,7 +303,15 @@ app.post('/finalize-log', async (req, res) => {
 
     const filename = `exam-log-${session.studentId}-${session.examId}-${batchId}.json`;
     const { cid, source } = await uploadToIPFS(logBatch, filename);
-    const blockchain = await storeLogOnChain(batchId, cid, score);
+    const blockchain = await storeLogOnChain(
+      batchId,
+      cid,
+      hash,
+      session.studentId,
+      session.examId,
+      score,
+      logBatch.examMarks
+    );
 
     console.log(`[Finalize] BatchId: ${batchId} | CID: ${cid} | Hash: ${hash}`);
     delete sessions[sessionId];
@@ -238,7 +338,7 @@ app.post('/finalize-log', async (req, res) => {
     res.status(500).json({
       error: 'Failed to finalize log',
       details: err.message,
-      hint: 'Add valid Pinata keys to backend/.env. For blockchain storage, also start the Hardhat local chain and set CONTRACT_ADDRESS and PRIVATE_KEY.',
+      hint: 'Add valid Pinata keys to backend/.env. For blockchain storage, also start Ganache Desktop and set CONTRACT_ADDRESS and PRIVATE_KEY.',
     });
   }
 });
